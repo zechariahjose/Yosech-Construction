@@ -1,5 +1,4 @@
-CREATE DATABASE IF NOT EXISTS resource_tracker;
-USE resource_tracker;
+USE yosech_db;
 
 CREATE TABLE Client (
     UserID          INT AUTO_INCREMENT PRIMARY KEY,
