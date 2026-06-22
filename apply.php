@@ -115,7 +115,6 @@ if (isset($_POST['submit'])) {
                                 <option value="">Choose type</option>
                                 <option value="New Project">New Project</option>
                                 <option value="Equipment Rental">Equipment Rental</option>
-                                <option value="Consultation">Consultation</option>
                             </select>
                         </div>
 
