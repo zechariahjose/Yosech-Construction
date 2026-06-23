@@ -1,0 +1,239 @@
+
+#main-navbar {
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+#main-navbar .nav-link {
+    color: #374151;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 6px 12px;
+}
+
+#main-navbar .nav-link:hover {
+    color: #1d4ed8;
+}
+
+#main-navbar .navbar-brand {
+    font-size: 1rem;
+    color: #1d4ed8 !important;
+}
+
+
+.login-wrapper {
+    min-height: calc(100vh - 60px - 220px);
+    background: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 16px;
+}
+
+.login-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 36px 32px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    text-align: center;
+}
+
+.login-icon-wrap {
+    width: 64px;
+    height: 64px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+}
+
+.login-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 6px;
+}
+
+.login-subtitle {
+    font-size: 0.82rem;
+    color: #6b7280;
+    margin-bottom: 20px;
+}
+
+.login-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #374151;
+    text-align: left;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.input-icon-wrap {
+    position: relative;
+}
+
+.login-input {
+    font-size: 0.85rem;
+    padding-right: 36px;
+    border-color: #d1d5db;
+    border-radius: 6px;
+}
+
+.login-input:focus {
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 3px rgba(29,78,216,0.1);
+}
+
+.input-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.login-forgot {
+    font-size: 0.78rem;
+    color: #1d4ed8;
+    text-decoration: none;
+}
+
+.login-forgot:hover {
+    text-decoration: underline;
+}
+
+.login-remember {
+    font-size: 0.78rem;
+    color: #6b7280;
+}
+
+.login-btn {
+    background: #1d4ed8;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 10px;
+}
+
+.login-btn:hover {
+    background: #1e40af;
+}
+
+.login-divider {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin: 16px 0 12px;
+    position: relative;
+}
+
+.login-divider::before,
+.login-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 30%;
+    height: 1px;
+    background: #e5e7eb;
+}
+
+.login-divider::before { left: 0; }
+.login-divider::after  { right: 0; }
+
+.login-request-btn {
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    border-color: #d1d5db;
+    color: #374151;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+.login-request-btn:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+/* FOOTER */
+.site-footer {
+    background: #1f2937;
+    color: #d1d5db;
+    padding: 40px 0 0;
+}
+
+.footer-top {
+    padding-bottom: 32px;
+    border-bottom: 1px solid #374151;
+}
+
+.footer-brand {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1d4ed8;
+    margin-bottom: 10px;
+}
+
+.footer-desc {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    line-height: 1.6;
+}
+
+.footer-heading {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #f9fafb;
+    margin-bottom: 12px;
+}
+
+.footer-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-links li {
+    margin-bottom: 8px;
+}
+
+.footer-links a {
+    font-size: 0.82rem;
+    color: #9ca3af;
+    text-decoration: none;
+}
+
+.footer-links a:hover {
+    color: #fff;
+}
+
+.footer-contact {
+    font-size: 0.82rem;
+    color: #9ca3af;
+    margin-bottom: 4px;
+}
+
+.footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 0;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.footer-icons {
+    display: flex;
+    gap: 12px;
+    color: #6b7280;
+}
