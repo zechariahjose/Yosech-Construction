@@ -1,7 +1,7 @@
 CREATE DATABASE IF NOT EXISTS yosech_db;
 USE yosech_db;
 
-CREATE TABLE Client (
+CREATE TABLE IF NOT EXISTS Client (
     UserID                  INT AUTO_INCREMENT PRIMARY KEY,
     Client_FirstName        VARCHAR(50)  NOT NULL,
     Client_MI               CHAR(1),
@@ -12,7 +12,7 @@ CREATE TABLE Client (
     Client_ContactNumber    VARCHAR(20)
 );
 
-CREATE TABLE Employee (
+CREATE TABLE IF NOT EXISTS Employee (
     EmployeeID      INT AUTO_INCREMENT PRIMARY KEY,
     UserType        ENUM('Admin', 'Manager', 'Employee') NOT NULL DEFAULT 'Employee',
     Username        VARCHAR(50)  NOT NULL UNIQUE,
@@ -21,7 +21,7 @@ CREATE TABLE Employee (
     ContactNumber   VARCHAR(20)
 );
 
-CREATE TABLE Equipment (
+CREATE TABLE IF NOT EXISTS Equipment (
     EquipmentID             INT AUTO_INCREMENT PRIMARY KEY,
     Specification           TEXT,
     StartDate               DATE,
@@ -31,7 +31,7 @@ CREATE TABLE Equipment (
     EquipmentPaymentStatus  ENUM('Unpaid', 'Paid', 'Partial') NOT NULL DEFAULT 'Unpaid'
 );
 
-CREATE TABLE Application (
+CREATE TABLE IF NOT EXISTS Application (
     ApplicationID   INT AUTO_INCREMENT PRIMARY KEY,
     UserID          INT NOT NULL,
     EquipmentID     INT NOT NULL,
@@ -45,7 +45,7 @@ CREATE TABLE Application (
         ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE Project (
+CREATE TABLE IF NOT EXISTS Project (
     ProjectID               INT AUTO_INCREMENT PRIMARY KEY,
     ApplicationID           INT NOT NULL,
     ProposalDate            DATE,
@@ -60,7 +60,7 @@ CREATE TABLE Project (
         ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE Project_Update (
+CREATE TABLE IF NOT EXISTS Project_Update (
     UpdateID    INT AUTO_INCREMENT PRIMARY KEY,
     ProjectID   INT NOT NULL,
     EmployeeID  INT NOT NULL,
@@ -109,18 +109,17 @@ VALUES
 ('Low Bed Trailer Truck', 'LBT-600', 'Heavy transport trailer for oversized machinery and large construction loads.', 'Load capacity: 45 tons · Trailer length: 14 m · Axles: 4', 2400.00, 18500.00, 104000.00, 380000.00, 'Available'),
 ('Dumptruck', 'DMP-220', 'High-capacity dump truck for earthmoving, haulage, and site demolition debris.', 'Load capacity: 18 tons · Body volume: 16 m³ · Engine: Euro IV', 1650.00, 12500.00, 68000.00, 245000.00, 'Available');
 
-INSERT IGNORE INTO ProjectShowcase (Title, Summary, StartDate, EndDate, Status)
+INSERT IGNORE INTO ProjectShowcase (Title, Summary, StartDate, EndDate, Status, ImageURL)
 VALUES
 ('Road Concreting – Barangay Punta', 'A 2-kilometer road upgrade to improve access and ensure safer travel for local residents and vehicles. This project helped reduce dust, mud, and daily wear on transportation.', '2024-02-10', '2024-04-22', 'Completed', 'assets/projects/roadConcreting.jpg'),
 ('Flood Barrier – Purok 7 Riverbank', 'We constructed a reinforced flood barrier system to protect homes and businesses during heavy rains. This is one of our key efforts in supporting disaster resilience for the community.', '2024-01-05', '2024-03-18', 'Completed', 'assets/projects/floodBarrier.png'),
-('Multi-Purpose Building – Barangay Hall Extension', 'A fully functional space designed for barangay meetings, events, and emergency response. Built with durability and adaptability in mind.', '2024-02-12', '2024-05-05', 'Completed' '', 'assets/projects/multiPurposeBuilding.jpg'),
+('Multi-Purpose Building – Barangay Hall Extension', 'A fully functional space designed for barangay meetings, events, and emergency response. Built with durability and adaptability in mind.', '2024-02-12', '2024-05-05', 'Completed', 'assets/projects/multiPurposeBuilding.jpg'),
 ('Drainage Canal – Zone 3 Main Street', 'This project improved water flow during storms, helping prevent frequent flooding. It included excavation, canal lining, and safety barriers.', '2023-11-20', '2024-01-10', 'Completed', 'assets/projects/drainageCanal.png'),
 ('2-Story Commercial Building', 'A modern two-story structure built to accommodate retail and office spaces. This project showcases our capacity for vertical construction, combining structural integrity with clean design.', '2023-08-15', '2023-12-01', 'Completed', 'assets/projects/2storyBuilding.jpg'),
-('Road Concreting', 'A major road improvement project aimed at enhancing transportation and accessibility in the area. Once completed, this concrete road will reduce travel time and improve road safety for both commuters and delivery vehicles.', '2025-04-15', NULL, 'Ongoing'),
-('Drainage System', 'Currently under construction, this drainage project is being implemented to prevent flooding and waterlogging in low-lying residential zones. The system is designed to improve runoff flow and enhance flood protection during heavy rains.', '2025-05-05', NULL, 'Ongoing'),
-('3-Story Commercial Building', 'A modern commercial building under development, built to accommodate shops, offices, and rental spaces. The structure is designed with energy efficiency and accessibility in mind, and will serve as a hub for growing businesses in the area.', '2025-02-10', NULL, 'Ongoing'),
-('Underground Conveyor Tunnel', 'A specialized infrastructure project designed to support the efficient transport of materials across an industrial facility. The tunnel includes reinforced walls and integrated safety systems to ensure long-term durability and smooth operation.', '2025-11-20', NULL, 'Ongoing');
-
+('Road Concreting', 'A major road improvement project aimed at enhancing transportation and accessibility in the area. Once completed, this concrete road will reduce travel time and improve road safety for both commuters and delivery vehicles.', '2025-04-15', NULL, 'Ongoing', NULL),
+('Drainage System', 'Currently under construction, this drainage project is being implemented to prevent flooding and waterlogging in low-lying residential zones. The system is designed to improve runoff flow and enhance flood protection during heavy rains.', '2025-05-05', NULL, 'Ongoing', NULL),
+('3-Story Commercial Building', 'A modern commercial building under development, built to accommodate shops, offices, and rental spaces. The structure is designed with energy efficiency and accessibility in mind, and will serve as a hub for growing businesses in the area.', '2025-02-10', NULL, 'Ongoing', NULL),
+('Underground Conveyor Tunnel', 'A specialized infrastructure project designed to support the efficient transport of materials across an industrial facility. The tunnel includes reinforced walls and integrated safety systems to ensure long-term durability and smooth operation.', '2025-11-20', NULL, 'Ongoing', NULL);
 DELIMITER $$
 
 CREATE TRIGGER trg_equipment_on_application_approved
