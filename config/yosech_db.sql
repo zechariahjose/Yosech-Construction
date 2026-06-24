@@ -183,3 +183,12 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+INSERT IGNORE INTO Employee (UserType, Username, Password, Email, ContactNumber)
+VALUES ('Admin', 'admin', 'admin123', 'admin@yosechconstruction.com', NULL);
+
+INSERT IGNORE INTO Employee (UserType, Username, Password, Email, ContactNumber)
+VALUES ('Admin', 'admin', 'admin123', 'admin@yosechconstruction.com', NULL);
+
+INSERT IGNORE INTO Employee (UserType, Username, Password, Email, ContactNumber)
+VALUES ('Admin', 'admin', 'admin123', 'admin@yosechconstruction.com', NULL);
