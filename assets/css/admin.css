@@ -48,6 +48,21 @@
     z-index: 100;
 }
 
+.admin-console-sidebar {
+    border-left: 4px solid var(--admin-primary);
+}
+
+.admin-console-banner {
+    background: linear-gradient(135deg, var(--admin-primary) 0%, #1d4ed8 100%);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 8px 12px;
+}
+
 .admin-brand {
     display: flex;
     align-items: center;

@@ -188,7 +188,4 @@ INSERT IGNORE INTO Employee (UserType, Username, Password, Email, ContactNumber)
 VALUES ('Admin', 'admin', 'admin123', 'admin@yosechconstruction.com', NULL);
 
 INSERT IGNORE INTO Employee (UserType, Username, Password, Email, ContactNumber)
-VALUES ('Admin', 'admin', 'admin123', 'admin@yosechconstruction.com', NULL);
-
-INSERT IGNORE INTO Employee (UserType, Username, Password, Email, ContactNumber)
-VALUES ('Admin', 'admin', 'admin123', 'admin@yosechconstruction.com', NULL);
+VALUES ('Manager', 'manager', 'manager123', 'manager@yosechconstruction.com', NULL);

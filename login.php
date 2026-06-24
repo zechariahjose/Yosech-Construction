@@ -7,7 +7,7 @@ include("config/database.php");
 
 if (!defined('BASE_URL')) {
     $scriptPath = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
-    $appBase = preg_replace('#/admin$#', '', $scriptPath);
+    $appBase = preg_replace('#/(admin|manager)$#', '', $scriptPath);
     $appBase = rtrim($appBase, '/');
     if ($appBase === '') {
         $appBase = '/';
@@ -27,9 +27,18 @@ function loginRedirectTarget($path)
     return BASE_URL . '/' . ltrim($path, '/');
 }
 
-function loginStaffRedirectTarget($path)
+function loginStaffRedirectTarget($path, ?string $userType = null)
 {
+    $userType = $userType ?? ($_SESSION['user_type'] ?? 'Admin');
     $path = ltrim(trim($path), '/');
+
+    if ($userType === 'Manager') {
+        if ($path !== '' && strpos($path, 'manager/') === 0) {
+            return loginRedirectTarget($path);
+        }
+
+        return loginRedirectTarget('manager/mgr_dashboard.php');
+    }
 
     if ($path !== '' && strpos($path, 'admin/') === 0) {
         return loginRedirectTarget($path);
@@ -47,8 +56,12 @@ if (isset($_SESSION['user_type'])) {
         header('Location: ' . loginRedirectTarget($redirect));
         exit;
     }
-    if (in_array($_SESSION['user_type'], ['Admin', 'Manager'])) {
-        header('Location: ' . loginStaffRedirectTarget($redirect));
+    if ($_SESSION['user_type'] === 'Admin') {
+        header('Location: ' . loginStaffRedirectTarget($redirect, 'Admin'));
+        exit;
+    }
+    if ($_SESSION['user_type'] === 'Manager') {
+        header('Location: ' . loginStaffRedirectTarget($redirect, 'Manager'));
         exit;
     }
 }
@@ -71,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_type'] = $user['UserType'];
                 $_SESSION['username'] = $user['Username'];
 
-                header('Location: ' . loginStaffRedirectTarget($redirect));
+                header('Location: ' . loginStaffRedirectTarget($redirect, $user['UserType']));
                 exit;
             }
         }

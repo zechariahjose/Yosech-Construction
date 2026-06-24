@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 if (!defined('BASE_URL')) {
     $scriptPath = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
-    $appBase = preg_replace('#/admin$#', '', $scriptPath);
+    $appBase = preg_replace('#/(admin|manager)$#', '', $scriptPath);
     $appBase = rtrim($appBase, '/');
     if ($appBase === '') {
         $appBase = '/';

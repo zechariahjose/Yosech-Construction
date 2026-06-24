@@ -11,7 +11,8 @@ $searchQuery = trim($_GET['q'] ?? '');
 $sql = "
     SELECT c.*,
            (SELECT COUNT(*) FROM Application a WHERE a.UserID = c.UserID) AS application_count,
-           (SELECT COUNT(*) FROM Application a WHERE a.UserID = c.UserID AND a.Status = 'Approved') AS approved_count
+           (SELECT COUNT(*) FROM Application a WHERE a.UserID = c.UserID AND a.Status = 'Approved') AS approved_count,
+           (SELECT COALESCE(SUM(a.ProposalBudget), 0) FROM Application a WHERE a.UserID = c.UserID AND a.Status = 'Approved') AS approved_revenue
     FROM Client c
 ";
 
@@ -28,12 +29,17 @@ $sql .= " ORDER BY c.UserID DESC";
 $result = mysqli_query($conn, $sql);
 
 $totalClients = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS total FROM Client"))['total'];
+$totalRevenue = (float) mysqli_fetch_assoc(mysqli_query(
+    $conn,
+    "SELECT COALESCE(SUM(ProposalBudget), 0) AS total FROM Application WHERE Status = 'Approved'"
+))['total'];
 
 $adminActiveNav = 'clients';
 $adminPageTitle = 'Clients';
-$adminPageSubtitle = 'Registered client accounts, contact details, and application history.';
+$adminPageSubtitle = 'Corporate client relationships, revenue from approved proposals, and account growth.';
 $adminPageActions = '
-    <span class="admin-btn admin-btn-outline" style="cursor:default;">' . $totalClients . ' total clients</span>
+    <span class="admin-btn admin-btn-outline" style="cursor:default;">' . $totalClients . ' clients</span>
+    <span class="admin-btn admin-btn-primary" style="cursor:default;">₱' . number_format($totalRevenue, 0) . ' approved pipeline</span>
 ';
 
 include("../includes/admin/layout_start.php");
@@ -55,6 +61,7 @@ include("../includes/admin/layout_start.php");
                     <th>Contact</th>
                     <th>Applications</th>
                     <th>Approved</th>
+                    <th>Approved Revenue</th>
                 </tr>
             </thead>
             <tbody>
@@ -71,6 +78,7 @@ include("../includes/admin/layout_start.php");
                     <td><?= htmlspecialchars($client['Client_ContactNumber'] ?: '—') ?></td>
                     <td><?= (int) $client['application_count'] ?></td>
                     <td><?= (int) $client['approved_count'] ?></td>
+                    <td>₱<?= number_format((float) $client['approved_revenue'], 0) ?></td>
                 </tr>
                 <?php endwhile; ?>
             </tbody>

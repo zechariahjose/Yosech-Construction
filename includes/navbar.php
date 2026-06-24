@@ -2,7 +2,9 @@
 $currentPage = basename($_SERVER['PHP_SELF']);
 $isLoggedIn = isset($_SESSION['user_type']);
 $isClient = $isLoggedIn && $_SESSION['user_type'] === 'Client';
-$isStaff = $isLoggedIn && in_array($_SESSION['user_type'], ['Admin', 'Manager']);
+$isAdmin = $isLoggedIn && $_SESSION['user_type'] === 'Admin';
+$isManager = $isLoggedIn && $_SESSION['user_type'] === 'Manager';
+$isStaff = $isAdmin || $isManager;
 ?>
 <nav class="navbar navbar-expand-lg ysc-navbar">
     <div class="container">
@@ -32,8 +34,11 @@ $isStaff = $isLoggedIn && in_array($_SESSION['user_type'], ['Admin', 'Manager'])
                 <?php if ($isClient): ?>
                     <a class="ysc-btn-outline" href="<?= BASE_URL ?>/track_project.php">My Projects</a>
                     <a class="ysc-btn-primary" href="<?= BASE_URL ?>/logout.php">Logout</a>
-                <?php elseif ($isStaff): ?>
+                <?php elseif ($isAdmin): ?>
                     <a class="ysc-btn-outline" href="<?= BASE_URL ?>/admin/amin_dashboard.php">Admin Panel</a>
+                    <a class="ysc-btn-primary" href="<?= BASE_URL ?>/logout.php">Logout</a>
+                <?php elseif ($isManager): ?>
+                    <a class="ysc-btn-outline" href="<?= BASE_URL ?>/manager/mgr_dashboard.php">Manager Panel</a>
                     <a class="ysc-btn-primary" href="<?= BASE_URL ?>/logout.php">Logout</a>
                 <?php else: ?>
                     <a class="ysc-btn-outline<?= in_array($currentPage, ['login.php', 'signup.php']) ? ' active' : '' ?>" href="<?= BASE_URL ?>/login.php">Login</a>

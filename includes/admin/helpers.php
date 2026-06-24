@@ -5,7 +5,7 @@
 
 if (!defined('BASE_URL')) {
     $scriptPath = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
-    $appBase = preg_replace('#/admin$#', '', $scriptPath);
+    $appBase = preg_replace('#/(admin|manager)$#', '', $scriptPath);
     $appBase = rtrim($appBase, '/');
     if ($appBase === '') {
         $appBase = '/';
@@ -19,7 +19,7 @@ function adminRequireLogin(string $redirectPath): void
         session_start();
     }
 
-    if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['Admin', 'Manager'], true)) {
+    if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'Admin') {
         header('Location: ../login.php?redirect=' . urlencode($redirectPath));
         exit;
     }
