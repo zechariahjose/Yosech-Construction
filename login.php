@@ -27,6 +27,17 @@ function loginRedirectTarget($path)
     return BASE_URL . '/' . ltrim($path, '/');
 }
 
+function loginStaffRedirectTarget($path)
+{
+    $path = ltrim(trim($path), '/');
+
+    if ($path !== '' && strpos($path, 'admin/') === 0) {
+        return loginRedirectTarget($path);
+    }
+
+    return loginRedirectTarget('admin/amin_dashboard.php');
+}
+
 $error = '';
 $success = isset($_GET['registered']) ? 'Account created successfully. Please sign in.' : '';
 $redirect = $_GET['redirect'] ?? $_POST['redirect'] ?? 'index.php';
@@ -37,7 +48,7 @@ if (isset($_SESSION['user_type'])) {
         exit;
     }
     if (in_array($_SESSION['user_type'], ['Admin', 'Manager'])) {
-        header('Location: ' . loginRedirectTarget($redirect !== 'index.php' ? $redirect : 'admin/amin_dashboard.php'));
+        header('Location: ' . loginStaffRedirectTarget($redirect));
         exit;
     }
 }
@@ -60,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_type'] = $user['UserType'];
                 $_SESSION['username'] = $user['Username'];
 
-                header('Location: ' . loginRedirectTarget($redirect !== '' ? $redirect : 'admin/amin_dashboard.php'));
+                header('Location: ' . loginStaffRedirectTarget($redirect));
                 exit;
             }
         }

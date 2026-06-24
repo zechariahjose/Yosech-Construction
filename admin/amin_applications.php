@@ -1,17 +1,15 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 include("../config/database.php");
+include("../includes/admin/helpers.php");
 
-if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['Admin', 'Manager'])) {
-    header('Location: ../login.php?redirect=' . urlencode('admin/amin_applications.php'));
-    exit;
-}
+adminRequireLogin('admin/amin_applications.php');
+
+$adminEmployee = adminCurrentEmployee($conn);
+$adminPendingCount = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS total FROM Application WHERE Status = 'Pending'"))['total'];
+$employeeId = (int) $_SESSION['user_id'];
 
 if (isset($_POST['action'], $_POST['application_id'])) {
     $applicationId = (int) $_POST['application_id'];
-    $employeeId = (int) $_SESSION['user_id'];
 
     if ($_POST['action'] === 'approve') {
         mysqli_query($conn, "UPDATE Application SET Status = 'Approved' WHERE ApplicationID = {$applicationId}");
@@ -46,57 +44,119 @@ if (isset($_POST['action'], $_POST['application_id'])) {
     }
 }
 
-include("../includes/header.php");
-include("../includes/navbar.php");
+$statusFilter = $_GET['status'] ?? '';
+$querySql = "
+    SELECT a.*, c.Client_FirstName, c.Client_LastName, c.Client_Email,
+           eo.Name AS EquipmentName, eo.Model AS EquipmentModel
+    FROM Application a
+    JOIN Client c ON a.UserID = c.UserID
+    LEFT JOIN Equipment e ON a.EquipmentID = e.EquipmentID
+    LEFT JOIN EquipmentOffering eo ON e.EquipmentOfferingID = eo.EquipmentOfferingID
+";
 
-$query = mysqli_query(
-    $conn,
-    "SELECT a.*, c.Client_FirstName, c.Client_LastName, eo.Name AS EquipmentName, eo.Model AS EquipmentModel
-     FROM Application a
-     JOIN Client c ON a.UserID = c.UserID
-     LEFT JOIN Equipment e ON a.EquipmentID = e.EquipmentID
-     LEFT JOIN EquipmentOffering eo ON e.EquipmentOfferingID = eo.EquipmentOfferingID
-     ORDER BY a.SubmissionDate DESC"
-);
+if ($statusFilter !== '') {
+    $escStatus = mysqli_real_escape_string($conn, $statusFilter);
+    $querySql .= " WHERE a.Status = '{$escStatus}'";
+}
+
+$querySql .= " ORDER BY a.SubmissionDate DESC";
+$query = mysqli_query($conn, $querySql);
+
+$adminActiveNav = 'applications';
+$adminPageTitle = 'Applications';
+$adminPageSubtitle = 'Review client project proposals and equipment rental requests.';
+$adminPageActions = '
+    <a href="' . BASE_URL . '/admin/amin_applications.php?status=Pending" class="admin-btn admin-btn-outline">Pending only</a>
+    <a href="' . BASE_URL . '/admin/amin_applications.php" class="admin-btn admin-btn-outline">All applications</a>
+';
+
+include("../includes/admin/layout_start.php");
 ?>
 
-<div class="container mt-5">
-    <h2>Application Review</h2>
-    <p class="text-muted mb-4">Approve project applications to create a tracked project. Equipment rental approvals update fleet availability automatically.</p>
+<?php if (mysqli_num_rows($query) === 0): ?>
+    <div class="admin-alert admin-alert-info">No applications found<?= $statusFilter !== '' ? ' with status ' . htmlspecialchars($statusFilter) : '' ?>.</div>
+<?php endif; ?>
 
-    <?php if (mysqli_num_rows($query) === 0): ?>
-        <div class="alert alert-info">No applications found.</div>
-    <?php endif; ?>
+<div class="admin-card-grid">
+    <?php while ($app = mysqli_fetch_assoc($query)):
+        $statusClass = match ($app['Status']) {
+            'Approved' => 'admin-badge-approved',
+            'Rejected' => 'admin-badge-rejected',
+            default => 'admin-badge-pending',
+        };
+    ?>
+    <div class="admin-card">
+        <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+            <div>
+                <h3 class="admin-card-title mb-1">Application #<?= (int) $app['ApplicationID'] ?></h3>
+                <div class="small text-muted"><?= htmlspecialchars($app['ApplicationType']) ?></div>
+            </div>
+            <span class="admin-badge <?= $statusClass ?>"><?= htmlspecialchars($app['Status']) ?></span>
+        </div>
 
-    <?php while ($app = mysqli_fetch_assoc($query)): ?>
-        <div class="card mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Application #<?= $app['ApplicationID'] ?> — <?= htmlspecialchars($app['ApplicationType']) ?></h5>
-                <p class="card-text"><strong>Client:</strong> <?= htmlspecialchars($app['Client_FirstName'] . ' ' . $app['Client_LastName']) ?></p>
-                <p class="card-text"><strong>Submitted:</strong> <?= htmlspecialchars($app['SubmissionDate']) ?></p>
-                <p class="card-text"><strong>Status:</strong> <?= htmlspecialchars($app['Status']) ?></p>
-
-                <?php if ($app['ApplicationType'] === 'Equipment Rental'): ?>
-                    <p class="card-text"><strong>Equipment:</strong> <?= htmlspecialchars(trim(($app['EquipmentName'] ?? 'Unknown') . ($app['EquipmentModel'] ? ' (' . $app['EquipmentModel'] . ')' : ''))) ?></p>
-                    <p class="card-text"><strong>Rental Period:</strong> <?= htmlspecialchars($app['RentalStartDate'] ?? '—') ?> to <?= htmlspecialchars($app['RentalEndDate'] ?? '—') ?></p>
-                    <p class="card-text"><strong>Operator Needed:</strong> <?= !empty($app['NeedsOperator']) ? 'Yes' : 'No' ?></p>
-                <?php elseif ($app['ApplicationType'] === 'New Project'): ?>
-                    <p class="card-text"><strong>Project Title:</strong> <?= htmlspecialchars($app['ProjectTitle'] ?? '—') ?></p>
-                    <p class="card-text"><strong>Location:</strong> <?= htmlspecialchars($app['ProjectLocation'] ?? '—') ?></p>
-                    <p class="card-text"><strong>Proposed Budget:</strong> <?= $app['ProposalBudget'] !== null ? '₱' . number_format((float) $app['ProposalBudget'], 2) : '—' ?></p>
-                    <p class="card-text"><strong>Estimated Timeline:</strong> <?= htmlspecialchars($app['ProjectStartDate'] ?? '—') ?> to <?= htmlspecialchars($app['ProjectEndDate'] ?? '—') ?></p>
-                <?php endif; ?>
-
-                <p class="card-text"><strong>Description:</strong><br><?= nl2br(htmlspecialchars($app['Description'])) ?></p>
-
-                <form method="post" class="d-flex gap-2">
-                    <input type="hidden" name="application_id" value="<?= $app['ApplicationID'] ?>">
-                    <button type="submit" name="action" value="approve" class="btn btn-success" <?= $app['Status'] === 'Approved' ? 'disabled' : '' ?>>Approve</button>
-                    <button type="submit" name="action" value="reject" class="btn btn-danger" <?= $app['Status'] === 'Rejected' ? 'disabled' : '' ?>>Reject</button>
-                </form>
+        <div class="admin-meta-grid">
+            <div class="admin-meta-item">
+                <span>Client</span>
+                <?= htmlspecialchars($app['Client_FirstName'] . ' ' . $app['Client_LastName']) ?>
+            </div>
+            <div class="admin-meta-item">
+                <span>Submitted</span>
+                <?= htmlspecialchars($app['SubmissionDate'] ?? '—') ?>
+            </div>
+            <div class="admin-meta-item">
+                <span>Email</span>
+                <?= htmlspecialchars($app['Client_Email']) ?>
             </div>
         </div>
+
+        <?php if ($app['ApplicationType'] === 'Equipment Rental'): ?>
+            <div class="admin-meta-grid">
+                <div class="admin-meta-item">
+                    <span>Equipment</span>
+                    <?= htmlspecialchars(trim(($app['EquipmentName'] ?? 'Unknown') . ($app['EquipmentModel'] ? ' (' . $app['EquipmentModel'] . ')' : ''))) ?>
+                </div>
+                <div class="admin-meta-item">
+                    <span>Rental Period</span>
+                    <?= htmlspecialchars(($app['RentalStartDate'] ?? '—') . ' to ' . ($app['RentalEndDate'] ?? '—')) ?>
+                </div>
+                <div class="admin-meta-item">
+                    <span>Operator Needed</span>
+                    <?= !empty($app['NeedsOperator']) ? 'Yes' : 'No' ?>
+                </div>
+            </div>
+        <?php elseif ($app['ApplicationType'] === 'New Project'): ?>
+            <div class="admin-meta-grid">
+                <div class="admin-meta-item">
+                    <span>Project Title</span>
+                    <?= htmlspecialchars($app['ProjectTitle'] ?? '—') ?>
+                </div>
+                <div class="admin-meta-item">
+                    <span>Location</span>
+                    <?= htmlspecialchars($app['ProjectLocation'] ?? '—') ?>
+                </div>
+                <div class="admin-meta-item">
+                    <span>Proposed Budget</span>
+                    <?= $app['ProposalBudget'] !== null ? '₱' . number_format((float) $app['ProposalBudget'], 2) : '—' ?>
+                </div>
+                <div class="admin-meta-item">
+                    <span>Timeline</span>
+                    <?= htmlspecialchars(($app['ProjectStartDate'] ?? '—') . ' to ' . ($app['ProjectEndDate'] ?? '—')) ?>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <div class="admin-field">
+            <label>Description</label>
+            <div class="small" style="line-height:1.6;color:#475569;"><?= nl2br(htmlspecialchars($app['Description'])) ?></div>
+        </div>
+
+        <form method="post" class="d-flex gap-2">
+            <input type="hidden" name="application_id" value="<?= (int) $app['ApplicationID'] ?>">
+            <button type="submit" name="action" value="approve" class="admin-btn admin-btn-success admin-btn-sm" <?= $app['Status'] === 'Approved' ? 'disabled' : '' ?>>Approve</button>
+            <button type="submit" name="action" value="reject" class="admin-btn admin-btn-danger admin-btn-sm" <?= $app['Status'] === 'Rejected' ? 'disabled' : '' ?>>Reject</button>
+        </form>
+    </div>
     <?php endwhile; ?>
 </div>
 
-<?php include("../includes/footer.php");
+<?php include("../includes/admin/layout_end.php"); ?>
