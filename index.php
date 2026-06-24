@@ -8,13 +8,13 @@ $userName = $isLoggedIn ? $_SESSION['user_name'] : null;
 $recentActivity = [];
 if ($isLoggedIn) {
     include("config/database.php");
-    $uid = $_SESSION['user_id'];
+    $uid = (int) $_SESSION['user_id'];
     $stmt = mysqli_prepare($conn, "
-        SELECT pu.Description, pu.Status, pu.UpdateDate, p.ProjectID
+        SELECT pu.Description, pu.Status, pu.UpdateDate, p.ProjectID, a.ApplicationType
         FROM Project_Update pu
         JOIN Project p ON pu.ProjectID = p.ProjectID
         JOIN Application a ON p.ApplicationID = a.ApplicationID
-        WHERE a.UserID = ?
+        WHERE a.UserID = ? AND a.Status = 'Approved'
         ORDER BY pu.UpdateDate DESC
         LIMIT 5
     ");
@@ -30,69 +30,69 @@ if ($isLoggedIn) {
 <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/home.css">
 
 <?php if ($isLoggedIn): ?>
-<!-- ===================== LOGGED IN VIEW ===================== -->
 <div class="home-hero">
     <div class="container">
         <h2 class="hero-title">Welcome back, <?= htmlspecialchars($userName) ?></h2>
-        <p class="hero-sub">Your construction projects are moving forward with precision. Here is the latest overview of your active sites and safety compliance.</p>
+        <p class="hero-sub">Track your applications and receive project updates once your submission has been approved by our team.</p>
     </div>
 </div>
 
 <div class="container home-content">
-    <!-- 3 Cards -->
     <div class="row g-4 mb-4">
         <div class="col-md-4">
             <div class="home-card">
                 <div class="home-card-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#1d4ed8" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                 </div>
-                <div class="home-card-title">Active Projects</div>
-                <div class="home-card-desc">View real-time progress, site photos, and timelines for 2 ongoing builds.</div>
-                <a href="<?= BASE_URL ?>/track_project.php" class="home-card-link">Explore Projects →</a>
+                <div class="home-card-title">My Projects</div>
+                <div class="home-card-desc">View your applications, approved projects, and the latest updates from our project managers.</div>
+                <a href="<?= BASE_URL ?>/track_project.php" class="home-card-link">View My Projects →</a>
             </div>
         </div>
         <div class="col-md-4">
             <div class="home-card">
                 <div class="home-card-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#1d4ed8" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
                 </div>
-                <div class="home-card-title">Safety Reports</div>
-                <div class="home-card-desc">Review OSHA compliance records, daily logs, and site safety inspections.</div>
-                <a href="#" class="home-card-link">View Compliance →</a>
+                <div class="home-card-title">Equipment Fleet</div>
+                <div class="home-card-desc">Browse available construction equipment and submit a rental application.</div>
+                <a href="<?= BASE_URL ?>/equipment.php" class="home-card-link">Browse Equipment →</a>
             </div>
         </div>
         <div class="col-md-4">
             <div class="home-card">
                 <div class="home-card-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#1d4ed8" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
                 </div>
-                <div class="home-card-title">Messages</div>
-                <div class="home-card-desc">Direct communication with your project managers and site supervisors.</div>
-                <a href="#" class="home-card-link">Open Inquiry →</a>
+                <div class="home-card-title">Submit Application</div>
+                <div class="home-card-desc">Apply for a new construction project or request equipment rental from Yosech Construction.</div>
+                <a href="<?= BASE_URL ?>/apply.php" class="home-card-link">Open Application Form →</a>
             </div>
         </div>
     </div>
 
-    <!-- Activity + Site Capture -->
     <div class="row g-4">
-        <div class="col-md-7">
+        <div class="col-lg-8">
             <div class="home-panel">
                 <div class="home-panel-header">
-                    <span class="home-panel-title">Recent Project Activity</span>
-                    <span class="home-panel-dash">—</span>
+                    <span class="home-panel-title">Recent Project Updates</span>
                 </div>
-                <table class="home-table">
-                    <thead>
-                        <tr>
-                            <th>Milestone</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($recentActivity)): ?>
-                            <tr><td colspan="3" class="text-center text-muted py-3">No recent activity found.</td></tr>
-                        <?php else: ?>
+                <?php if (empty($recentActivity)): ?>
+                    <div class="home-empty">
+                        <p>No project updates yet.</p>
+                        <span class="home-empty-sub">Updates will appear here once your application is approved and our team begins posting progress.</span>
+                        <a href="<?= BASE_URL ?>/apply.php" class="ysc-btn-primary btn-sm mt-3">Submit an Application</a>
+                    </div>
+                <?php else: ?>
+                    <table class="home-table">
+                        <thead>
+                            <tr>
+                                <th>Update</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
                             <?php foreach ($recentActivity as $act): ?>
                                 <tr>
                                     <td><?= htmlspecialchars($act['Description']) ?></td>
@@ -100,40 +100,34 @@ if ($isLoggedIn) {
                                     <td><?= date('M d, Y', strtotime($act['UpdateDate'])) ?></td>
                                 </tr>
                             <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-                <a href="<?= BASE_URL ?>/track_project.php" class="home-view-all">View All Activity Logs</a>
+                        </tbody>
+                    </table>
+                    <a href="<?= BASE_URL ?>/track_project.php" class="home-view-all">View All Updates</a>
+                <?php endif; ?>
             </div>
         </div>
-        <div class="col-md-5">
-            <div class="home-panel">
-                <div class="home-panel-header">
-                    <span class="home-panel-title" style="font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;">Latest Site Capture</span>
-                </div>
-                <div class="home-site-capture">
-                    <div class="home-capture-placeholder">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="#ccc" stroke-width="1.2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 3l18 18M3 21L21 3"/></svg>
-                    </div>
-                    <div class="home-capture-label">
-                        <span class="home-capture-name">Harbor Point – Block B</span>
-                        <span class="home-capture-sub">Captured via Drone · 2h ago</span>
-                    </div>
-                </div>
+        <div class="col-lg-4">
+            <div class="home-panel home-info-panel">
+                <div class="home-panel-title mb-3">How It Works</div>
+                <ol class="home-steps">
+                    <li>Submit an application for a new project or equipment rental.</li>
+                    <li>Our admin or project manager reviews your submission.</li>
+                    <li>Once approved, your project goes live and you receive updates here.</li>
+                </ol>
             </div>
         </div>
     </div>
 </div>
 
 <?php else: ?>
-<!-- ===================== GUEST VIEW ===================== -->
 <div class="home-hero guest-hero">
     <div class="container">
         <h2 class="hero-title">Building the Future of Zamboanga del Norte</h2>
-        <p class="hero-sub">Precision engineering and structural integrity for every project we undertake. Partner with Yosech Construction today.</p>
-        <div class="d-flex gap-3 mt-4">
-            <a href="<?= BASE_URL ?>/login.php" class="btn btn-primary px-4">Client Login</a>
-            <a href="<?= BASE_URL ?>/apply.php" class="btn btn-outline-light px-4">Project Inquiry</a>
+        <p class="hero-sub">Explore our project portfolio and equipment fleet. Sign up to submit applications and track your projects with Yosech Construction.</p>
+        <div class="hero-actions">
+            <a href="<?= BASE_URL ?>/projects.php" class="ysc-btn-outline btn-lg">View Projects</a>
+            <a href="<?= BASE_URL ?>/equipment.php" class="ysc-btn-outline btn-lg">Browse Equipment</a>
+            <a href="<?= BASE_URL ?>/signup.php" class="ysc-btn-primary btn-lg">Sign Up</a>
         </div>
     </div>
 </div>
@@ -143,65 +137,39 @@ if ($isLoggedIn) {
         <div class="col-md-4">
             <div class="home-card guest-card">
                 <div class="home-card-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#1d4ed8" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                 </div>
-                <div class="home-card-title">Track Your Projects</div>
-                <div class="home-card-desc">Monitor real-time progress, site photos, and timelines for your ongoing builds.</div>
-                <a href="<?= BASE_URL ?>/login.php" class="home-card-link">Login to Access →</a>
+                <div class="home-card-title">Project Portfolio</div>
+                <div class="home-card-desc">See completed and ongoing construction projects across Zamboanga del Norte.</div>
+                <a href="<?= BASE_URL ?>/projects.php" class="home-card-link">View Projects →</a>
             </div>
         </div>
         <div class="col-md-4">
             <div class="home-card guest-card">
                 <div class="home-card-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#1d4ed8" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
                 </div>
-                <div class="home-card-title">View Compliance Reports</div>
-                <div class="home-card-desc">Review safety standards, daily logs, and site compliance records for your projects.</div>
-                <a href="<?= BASE_URL ?>/login.php" class="home-card-link">Login to Access →</a>
+                <div class="home-card-title">Equipment Fleet</div>
+                <div class="home-card-desc">Browse our rental fleet with specs, availability, and rates for every job site.</div>
+                <a href="<?= BASE_URL ?>/equipment.php" class="home-card-link">Browse Equipment →</a>
             </div>
         </div>
         <div class="col-md-4">
             <div class="home-card guest-card">
                 <div class="home-card-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#1d4ed8" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
                 </div>
-                <div class="home-card-title">Message Your Team</div>
-                <div class="home-card-desc">Communicate directly with your project managers and site supervisors anytime.</div>
-                <a href="<?= BASE_URL ?>/login.php" class="home-card-link">Login to Access →</a>
+                <div class="home-card-title">Submit Application</div>
+                <div class="home-card-desc">Apply for a new project or equipment rental. Create an account to submit and track your application.</div>
+                <a href="<?= BASE_URL ?>/signup.php" class="home-card-link">Sign Up to Apply →</a>
             </div>
         </div>
     </div>
 
-    <!-- Guest info row -->
-    <div class="row g-4">
-        <div class="col-md-7">
-            <div class="home-panel">
-                <div class="home-panel-header">
-                    <span class="home-panel-title">Recent Project Activity</span>
-                </div>
-                <div class="guest-lock">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="#ccc" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    <p class="guest-lock-text">Login to view your project activity logs.</p>
-                    <a href="<?= BASE_URL ?>/login.php" class="btn btn-primary btn-sm px-4">Login</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-5">
-            <div class="home-panel">
-                <div class="home-panel-header">
-                    <span class="home-panel-title" style="font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;">Latest Site Capture</span>
-                </div>
-                <div class="home-site-capture">
-                    <div class="home-capture-placeholder">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="#ccc" stroke-width="1.2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 3l18 18M3 21L21 3"/></svg>
-                    </div>
-                    <div class="home-capture-label">
-                        <span class="home-capture-name">Login to view site captures</span>
-                        <span class="home-capture-sub">Available to registered clients only</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="home-panel home-info-panel text-center">
+        <div class="home-panel-title mb-2">For Registered Clients</div>
+        <p class="home-empty-sub mb-3">Log in to submit applications and receive project updates after approval.</p>
+        <a href="<?= BASE_URL ?>/login.php" class="ysc-btn-primary">Client Login</a>
     </div>
 </div>
 <?php endif; ?>

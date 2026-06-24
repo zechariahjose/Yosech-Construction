@@ -4,6 +4,8 @@ include("config/database.php");
 include("includes/header.php");
 include("includes/navbar.php");
 
+$isClient = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'Client';
+
 $result = mysqli_query(
     $conn,
     "SELECT * FROM EquipmentOffering ORDER BY EquipmentOfferingID ASC"
@@ -11,42 +13,73 @@ $result = mysqli_query(
 
 ?>
 
-<div class="container mt-5">
+<div class="container">
+    <div class="ysc-page-header">
+        <h1 class="ysc-page-title">Equipment Fleet</h1>
+        <p class="ysc-page-sub">Browse our rental fleet with detailed specifications and flexible hourly, daily, weekly, and monthly rates.</p>
+    </div>
 
-<h2>Equipment for Rent</h2>
-<p class="mb-4">Browse our rental fleet with detailed specifications and flexible hourly, daily, weekly, and monthly rates.</p>
+    <div class="ysc-search mb-4">
+        <span class="ysc-search-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </span>
+        <input type="search" id="equipmentSearch" placeholder="Search equipment by name or model..." aria-label="Search equipment">
+    </div>
 
-<div class="row gy-4">
+    <div class="row g-4 pb-5">
+        <?php while ($row = mysqli_fetch_assoc($result)): ?>
+        <div class="col-md-6 col-lg-4 equipment-item" data-name="<?= htmlspecialchars(strtolower($row['Name'] . ' ' . $row['Model'])) ?>">
+            <div class="ysc-card h-100">
+                <img src="<?= !empty($row['ImageURL']) ? BASE_URL . '/' . ltrim(htmlspecialchars($row['ImageURL']), '/') : 'https://via.placeholder.com/800x450?text=Equipment' ?>"
+                     class="w-100" style="height:200px;object-fit:cover;" alt="<?= htmlspecialchars($row['Name']) ?>">
+                <div class="ysc-card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="mb-0" style="font-size:0.95rem;font-weight:700;"><?= htmlspecialchars($row['Name']) ?></h5>
+                        <span class="ysc-badge ysc-badge-available"><?= htmlspecialchars($row['AvailabilityStatus']) ?></span>
+                    </div>
+                    <p class="small text-muted mb-3"><?= htmlspecialchars($row['Model']) ?></p>
 
-<?php while($row = mysqli_fetch_assoc($result)){ ?>
+                    <?php if (!empty($row['Specs'])): ?>
+                    <div class="mb-3">
+                        <?php foreach (explode('·', $row['Specs']) as $spec): ?>
+                            <?php $spec = trim($spec); if ($spec === '') continue; ?>
+                            <?php $parts = explode(':', $spec, 2); ?>
+                            <div class="ysc-spec-row">
+                                <span class="ysc-spec-label"><?= htmlspecialchars(trim($parts[0])) ?></span>
+                                <span class="ysc-spec-value"><?= htmlspecialchars(trim($parts[1] ?? '')) ?></span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
 
-<div class="col-lg-6">
-    <div class="card shadow-sm showcase-card h-100">
-        <img src="<?= !empty($row['ImageURL']) ? htmlspecialchars($row['ImageURL']) : 'https://via.placeholder.com/800x450?text=Add+Equipment+Photo' ?>" class="card-img-top showcase-image" alt="<?= htmlspecialchars($row['Name']) ?>">
-        <div class="card-body">
-            <h5 class="card-title"><?= htmlspecialchars($row['Name']) ?> <small class="text-muted"><?= htmlspecialchars($row['Model']) ?></small></h5>
-            <p class="card-text"><?= nl2br(htmlspecialchars($row['Description'])) ?></p>
-            <p class="mb-2"><strong>Specifications:</strong></p>
-            <p class="small text-muted mb-3"><?= nl2br(htmlspecialchars($row['Specs'])) ?></p>
+                    <div class="row g-2 mb-3 small">
+                        <div class="col-6"><span class="text-muted d-block">Daily</span><strong>₱<?= number_format($row['DailyRate'], 0) ?></strong></div>
+                        <div class="col-6"><span class="text-muted d-block">Weekly</span><strong>₱<?= number_format($row['WeeklyRate'], 0) ?></strong></div>
+                    </div>
 
-            <div class="row gx-2 gy-2 mb-3">
-                <div class="col-6 col-sm-3"><span class="d-block text-secondary">Hourly</span><strong>₱<?= number_format($row['HourlyRate'], 2) ?></strong></div>
-                <div class="col-6 col-sm-3"><span class="d-block text-secondary">Daily</span><strong>₱<?= number_format($row['DailyRate'], 2) ?></strong></div>
-                <div class="col-6 col-sm-3"><span class="d-block text-secondary">Weekly</span><strong>₱<?= number_format($row['WeeklyRate'], 2) ?></strong></div>
-                <div class="col-6 col-sm-3"><span class="d-block text-secondary">Monthly</span><strong>₱<?= number_format($row['MonthlyRate'], 2) ?></strong></div>
-            </div>
-            <div class="d-flex justify-content-between align-items-center">
-                <span class="badge bg-primary"><?= htmlspecialchars($row['AvailabilityStatus']) ?></span>
-                <small class="text-muted">Image field available for later upload</small>
+                    <?php
+                    $rentalUrl = BASE_URL . '/apply.php?type=Equipment+Rental&equipment=' . urlencode($row['Name']);
+                    $loginUrl = BASE_URL . '/login.php?redirect=' . urlencode('apply.php?type=Equipment+Rental&equipment=' . urlencode($row['Name']));
+                    ?>
+                    <?php if ($isClient): ?>
+                        <a href="<?= $rentalUrl ?>" class="ysc-btn-primary w-100 text-center">Apply for Rental</a>
+                    <?php else: ?>
+                        <a href="<?= $loginUrl ?>" class="ysc-btn-primary w-100 text-center">Apply for Rental</a>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
+        <?php endwhile; ?>
     </div>
 </div>
 
-<?php } ?>
-
-</div>
-
-</div>
+<script>
+document.getElementById('equipmentSearch').addEventListener('input', function () {
+    var q = this.value.toLowerCase();
+    document.querySelectorAll('.equipment-item').forEach(function (el) {
+        el.style.display = el.dataset.name.includes(q) ? '' : 'none';
+    });
+});
+</script>
 
 <?php include("includes/footer.php"); ?>

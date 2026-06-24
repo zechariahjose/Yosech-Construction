@@ -1,132 +1,128 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 include("config/database.php");
-include("includes/header.php");
-include("includes/navbar.php");
 
 $message = '';
 $success = '';
+$loginPrompt = isset($_GET['redirect']) && $_GET['redirect'] === 'login';
+$isClient = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'Client';
 
 $user = null;
-if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'Client') {
+if ($isClient) {
     $userId = (int) $_SESSION['user_id'];
     $result = mysqli_query($conn, "SELECT * FROM Client WHERE UserID = {$userId} LIMIT 1");
     $user = mysqli_fetch_assoc($result);
 }
 
 if (isset($_POST['submit'])) {
-    $firstName = trim(mysqli_real_escape_string($conn, $_POST['first_name']));
-    $mi = trim(mysqli_real_escape_string($conn, $_POST['mi']));
-    $lastName = trim(mysqli_real_escape_string($conn, $_POST['last_name']));
-    $username = trim(mysqli_real_escape_string($conn, $_POST['username']));
-    $email = trim(mysqli_real_escape_string($conn, $_POST['email']));
-    $contact = trim(mysqli_real_escape_string($conn, $_POST['contact']));
-    $password = trim($_POST['password']);
-    $applicationType = trim(mysqli_real_escape_string($conn, $_POST['application_type']));
-    $description = trim(mysqli_real_escape_string($conn, $_POST['description']));
+    if (!$isClient) {
+        $_SESSION['pending_application'] = $_POST;
+        header('Location: login.php?redirect=' . urlencode('apply.php'));
+        exit;
+    }
 
-    if ($firstName === '' || $lastName === '' || $username === '' || $email === '' || $applicationType === '' || $description === '') {
+    $applicationType = trim(mysqli_real_escape_string($conn, $_POST['application_type'] ?? ''));
+    $description = trim(mysqli_real_escape_string($conn, $_POST['description'] ?? ''));
+
+    if ($applicationType === '' || $description === '') {
         $message = 'Please complete all required fields.';
     } else {
-        $existing = mysqli_query($conn, "SELECT * FROM Client WHERE Username = '{$username}' OR Email = '{$email}' LIMIT 1");
-        if (mysqli_num_rows($existing) > 0) {
-            $client = mysqli_fetch_assoc($existing);
-            if (($client['Username'] === $username || $client['Email'] === $email) && $password !== '') {
-                $hash = $client['Password'];
-                if (!password_verify($password, $hash) && $hash !== $password) {
-                    $message = 'A client account already exists with this username or email. Please log in with the correct password.';
-                }
-            }
-            $userId = $client['UserID'];
-        } else {
-            $passwordHash = password_hash($password !== '' ? $password : bin2hex(random_bytes(8)), PASSWORD_DEFAULT);
-            mysqli_query($conn, "INSERT INTO Client (FirstName, MI, LastName, Username, Password, Email, ContactNumber) VALUES ('{$firstName}', '{$mi}', '{$lastName}', '{$username}', '{$passwordHash}', '{$email}', '{$contact}')");
-            $userId = mysqli_insert_id($conn);
-        }
-
-        if ($message === '') {
-            mysqli_query($conn, "INSERT INTO Application (UserID, ApplicationType, Description, SubmissionDate, Status) VALUES ({$userId}, '{$applicationType}', '{$description}', CURDATE(), 'Pending')");
-            $success = 'Your application has been submitted. We will contact you soon.';
-            if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'Client') {
-                $_SESSION['user_id'] = $userId;
-                $_SESSION['user_type'] = 'Client';
-                $_SESSION['username'] = $username;
-            }
-        }
+        $userId = (int) $_SESSION['user_id'];
+        mysqli_query($conn, "INSERT INTO Application (UserID, ApplicationType, Description, SubmissionDate, Status) VALUES ({$userId}, '{$applicationType}', '{$description}', CURDATE(), 'Pending')");
+        $success = 'Your application has been submitted. You will receive project updates here once it is approved.';
+        unset($_SESSION['pending_application']);
     }
 }
+
+$pending = $_SESSION['pending_application'] ?? [];
+$applicationType = $pending['application_type'] ?? ($_GET['type'] ?? '');
+$description = $pending['description'] ?? '';
+
+if (!empty($_GET['equipment'])) {
+    $equipmentNote = 'Equipment rental request: ' . $_GET['equipment'];
+    if ($description === '' || strpos($description, $equipmentNote) === false) {
+        $description = $equipmentNote . ($description !== '' ? "\n\n" . $description : '');
+    }
+    if ($applicationType === '') {
+        $applicationType = 'Equipment Rental';
+    }
+}
+
+if (!empty($_GET['project'])) {
+    $projectNote = 'New project inquiry: ' . $_GET['project'];
+    if ($description === '' || strpos($description, $projectNote) === false) {
+        $description = $projectNote . ($description !== '' ? "\n\n" . $description : '');
+    }
+    if ($applicationType === '') {
+        $applicationType = 'New Project';
+    }
+}
+
+include("includes/header.php");
+include("includes/navbar.php");
 ?>
 
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h2 class="card-title mb-4">Client Application</h2>
+<link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/home.css">
+<link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/auth.css">
 
-                    <?php if ($message): ?>
-                        <div class="alert alert-danger"><?= htmlspecialchars($message) ?></div>
-                    <?php endif; ?>
+<div class="container">
+    <div class="ysc-page-header">
+        <h1 class="ysc-page-title">Application Form</h1>
+        <p class="ysc-page-sub">Apply for a new construction project or request equipment rental. Once approved, you'll receive updates on your project dashboard.</p>
+    </div>
 
-                    <?php if ($success): ?>
-                        <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
-                    <?php endif; ?>
+    <div class="row justify-content-center pb-5">
+        <div class="col-lg-7">
+            <div class="home-panel">
+                <?php if ($loginPrompt && !$isClient): ?>
+                    <div class="auth-alert auth-alert-error mb-3">Please <a href="<?= BASE_URL ?>/login.php?redirect=<?= urlencode('apply.php') ?>">log in</a> or <a href="<?= BASE_URL ?>/signup.php?redirect=<?= urlencode('apply.php') ?>">sign up</a> to submit your application.</div>
+                <?php endif; ?>
 
-                    <form method="post" action="apply.php">
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">First Name</label>
-                                <input type="text" name="first_name" class="form-control" value="<?= htmlspecialchars($user['FirstName'] ?? '') ?>" required>
-                            </div>
-                            <div class="col-md-2 mb-3">
-                                <label class="form-label">MI</label>
-                                <input type="text" name="mi" class="form-control" value="<?= htmlspecialchars($user['MI'] ?? '') ?>">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Last Name</label>
-                                <input type="text" name="last_name" class="form-control" value="<?= htmlspecialchars($user['LastName'] ?? '') ?>" required>
-                            </div>
-                        </div>
+                <?php if ($message): ?>
+                    <div class="auth-alert auth-alert-error mb-3"><?= htmlspecialchars($message) ?></div>
+                <?php endif; ?>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Username</label>
-                                <input type="text" name="username" class="form-control" value="<?= htmlspecialchars($user['Username'] ?? '') ?>" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Email</label>
-                                <input type="email" name="email" class="form-control" value="<?= htmlspecialchars($user['Email'] ?? '') ?>" required>
-                            </div>
-                        </div>
+                <?php if ($success): ?>
+                    <div class="auth-alert auth-alert-success mb-3"><?= htmlspecialchars($success) ?></div>
+                <?php endif; ?>
 
-                        <div class="mb-3">
-                            <label class="form-label">Contact Number</label>
-                            <input type="text" name="contact" class="form-control" value="<?= htmlspecialchars($user['ContactNumber'] ?? '') ?>">
-                        </div>
+                <?php if ($isClient && $user): ?>
+                    <div class="home-info-note mb-4">
+                        Submitting as <strong><?= htmlspecialchars(trim(($user['Client_FirstName'] ?? '') . ' ' . ($user['Client_LastName'] ?? ''))) ?></strong>
+                        (<?= htmlspecialchars($user['Client_Username'] ?? '') ?>)
+                    </div>
+                <?php elseif (!$isClient): ?>
+                    <p class="text-muted small mb-4">You can fill out the form now. You'll be asked to log in or sign up when you submit.</p>
+                <?php endif; ?>
 
-                        <div class="mb-3">
-                            <label class="form-label">Password</label>
-                            <input type="password" name="password" class="form-control" placeholder="Choose a password for your account">
-                            <small class="text-muted">If your username already exists, enter the existing password; otherwise a new account will be created.</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Application Type</label>
-                            <select class="form-select" name="application_type" required>
+                <form method="post" action="apply.php">
+                    <div class="auth-field">
+                        <label for="application_type">Application Type</label>
+                        <div class="auth-input-wrap">
+                            <select id="application_type" name="application_type" class="form-select" style="padding:11px 14px;border-radius:6px;" required>
                                 <option value="">Choose type</option>
-                                <option value="New Project">New Project</option>
-                                <option value="Equipment Rental">Equipment Rental</option>
+                                <option value="New Project" <?= $applicationType === 'New Project' ? 'selected' : '' ?>>New Project</option>
+                                <option value="Equipment Rental" <?= $applicationType === 'Equipment Rental' ? 'selected' : '' ?>>Equipment Rental</option>
                             </select>
                         </div>
+                    </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Project Description</label>
-                            <textarea name="description" class="form-control" rows="5" required><?= htmlspecialchars($_POST['description'] ?? '') ?></textarea>
+                    <div class="auth-field">
+                        <label for="description">Description</label>
+                        <div class="auth-input-wrap">
+                            <textarea id="description" name="description" class="form-control" rows="6" style="padding:11px 14px;border-radius:6px;" placeholder="Describe your project requirements or equipment rental needs..." required><?= htmlspecialchars($description) ?></textarea>
                         </div>
+                    </div>
 
-                        <button type="submit" name="submit" class="btn btn-success">Submit Application</button>
-                        <a href="index.php" class="btn btn-link">Back to Home</a>
-                    </form>
-                </div>
+                    <button type="submit" name="submit" class="auth-submit">Submit Application</button>
+                </form>
+
+                <?php if (!$isClient): ?>
+                    <p class="auth-switch mt-3">Don't have an account? <a href="<?= BASE_URL ?>/signup.php?redirect=<?= urlencode('apply.php') ?>">Sign up</a> · <a href="<?= BASE_URL ?>/login.php?redirect=<?= urlencode('apply.php') ?>">Log in</a></p>
+                <?php endif; ?>
             </div>
         </div>
     </div>

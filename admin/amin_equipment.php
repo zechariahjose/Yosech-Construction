@@ -1,12 +1,16 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 include("../config/database.php");
-include("../includes/header.php");
-include("../includes/navbar.php");
 
 if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['Admin', 'Manager'])) {
-    header('Location: ../login.php');
+    header('Location: ../login.php?redirect=' . urlencode('admin/amin_equipment.php'));
     exit;
 }
+
+include("../includes/header.php");
+include("../includes/navbar.php");
 
 if (isset($_POST['equipment_id'], $_POST['availability_status'])) {
     $equipmentId = (int) $_POST['equipment_id'];

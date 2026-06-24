@@ -1,46 +1,55 @@
 .home-hero {
-    background: #1e3a5f;
-    color: #fff;
-    padding: 48px 0 40px;
+    background: #eef0f3;
+    color: var(--ysc-text);
+    padding: 56px 0 48px;
+    border-bottom: 1px solid var(--ysc-border);
 }
 
 .guest-hero {
-    background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%);
+    background: linear-gradient(180deg, #eef0f3 0%, #f3f4f6 100%);
 }
 
 .hero-title {
-    font-size: 1.8rem;
+    font-size: 2rem;
     font-weight: 700;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
 }
 
 .hero-sub {
-    font-size: 0.9rem;
-    color: #cbd5e1;
-    max-width: 500px;
+    font-size: 0.92rem;
+    color: var(--ysc-muted);
+    max-width: 540px;
+    line-height: 1.65;
 }
 
 .home-content {
-    padding-top: 32px;
-    padding-bottom: 48px;
+    padding-top: 36px;
+    padding-bottom: 56px;
 }
 
 .home-card {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
+    background: var(--ysc-surface);
+    border: 1px solid var(--ysc-border);
+    border-radius: var(--ysc-radius);
     padding: 24px;
     height: 100%;
+    transition: box-shadow var(--ysc-transition), transform var(--ysc-transition);
+}
+
+.home-card:hover {
+    box-shadow: var(--ysc-shadow-md);
+    transform: translateY(-2px);
 }
 
 .guest-card {
-    opacity: 0.92;
+    opacity: 1;
 }
 
 .home-card-icon {
     width: 40px;
     height: 40px;
-    background: #eff6ff;
+    background: var(--ysc-accent-bg);
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -48,36 +57,42 @@
     margin-bottom: 14px;
 }
 
+.home-card-icon svg {
+    stroke: var(--ysc-primary);
+}
+
 .home-card-title {
     font-size: 0.95rem;
     font-weight: 700;
-    color: #111827;
+    color: var(--ysc-text);
     margin-bottom: 8px;
 }
 
 .home-card-desc {
     font-size: 0.82rem;
-    color: #6b7280;
+    color: var(--ysc-muted);
     line-height: 1.6;
     margin-bottom: 16px;
 }
 
 .home-card-link {
     font-size: 0.82rem;
-    color: #1d4ed8;
+    color: var(--ysc-primary);
     text-decoration: none;
     font-weight: 600;
+    transition: color var(--ysc-transition);
 }
 
 .home-card-link:hover {
+    color: var(--ysc-primary-hover);
     text-decoration: underline;
 }
 
 .home-panel {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    padding: 20px;
+    background: var(--ysc-surface);
+    border: 1px solid var(--ysc-border);
+    border-radius: var(--ysc-radius);
+    padding: 22px;
     height: 100%;
 }
 
@@ -91,11 +106,11 @@
 .home-panel-title {
     font-size: 0.88rem;
     font-weight: 700;
-    color: #111827;
+    color: var(--ysc-text);
 }
 
 .home-panel-dash {
-    color: #9ca3af;
+    color: var(--ysc-muted-light);
     font-size: 0.9rem;
 }
 
@@ -107,17 +122,17 @@
 
 .home-table th {
     text-align: left;
-    color: #6b7280;
+    color: var(--ysc-muted);
     font-weight: 600;
     font-size: 0.75rem;
     padding: 6px 8px;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--ysc-border-light);
 }
 
 .home-table td {
     padding: 10px 8px;
-    color: #374151;
-    border-bottom: 1px solid #f9fafb;
+    color: var(--ysc-text-secondary);
+    border-bottom: 1px solid var(--ysc-border-light);
     vertical-align: middle;
 }
 
@@ -137,7 +152,7 @@
     text-align: center;
     margin-top: 14px;
     font-size: 0.8rem;
-    color: #1d4ed8;
+    color: var(--ysc-primary);
     text-decoration: none;
     font-weight: 600;
 }
@@ -151,7 +166,7 @@
 }
 
 .home-capture-placeholder {
-    background: #f3f4f6;
+    background: var(--ysc-border-light);
     border-radius: 8px;
     height: 160px;
     display: flex;
@@ -168,12 +183,38 @@
 .home-capture-name {
     font-size: 0.82rem;
     font-weight: 600;
-    color: #111827;
+    color: var(--ysc-text);
 }
 
 .home-capture-sub {
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--ysc-muted-light);
+}
+
+.home-health-bar {
+    margin-bottom: 14px;
+}
+
+.home-health-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--ysc-muted);
+    margin-bottom: 6px;
+}
+
+.home-health-track {
+    height: 6px;
+    background: var(--ysc-border-light);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.home-health-fill {
+    height: 100%;
+    background: var(--ysc-primary);
+    border-radius: 999px;
+    transition: width 0.6s ease;
 }
 
 .guest-lock {
@@ -187,6 +228,98 @@
 
 .guest-lock-text {
     font-size: 0.82rem;
-    color: #9ca3af;
+    color: var(--ysc-muted-light);
     margin: 0;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+}
+
+.home-empty {
+    text-align: center;
+    padding: 36px 20px;
+}
+
+.home-empty p {
+    font-weight: 600;
+    color: var(--ysc-text);
+    margin-bottom: 6px;
+}
+
+.home-empty-sub {
+    font-size: 0.84rem;
+    color: var(--ysc-muted);
+    display: block;
+    line-height: 1.6;
+}
+
+.home-info-panel {
+    background: var(--ysc-surface);
+}
+
+.home-steps {
+    padding-left: 18px;
+    margin: 0;
+    font-size: 0.84rem;
+    color: var(--ysc-muted);
+    line-height: 1.7;
+}
+
+.home-steps li {
+    margin-bottom: 10px;
+}
+
+.home-info-note {
+    background: var(--ysc-accent-bg);
+    border: 1px solid #e0e7ff;
+    border-radius: var(--ysc-radius-sm);
+    padding: 12px 14px;
+    font-size: 0.84rem;
+    color: var(--ysc-text-secondary);
+}
+
+.home-info-note-muted {
+    background: var(--ysc-border-light);
+    border-color: var(--ysc-border);
+}
+
+.home-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.home-timeline-item {
+    display: flex;
+    gap: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--ysc-border-light);
+}
+
+.home-timeline-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.home-timeline-date {
+    flex-shrink: 0;
+    width: 90px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--ysc-muted);
+}
+
+.home-timeline-body {
+    flex: 1;
+    font-size: 0.84rem;
+    color: var(--ysc-text-secondary);
+}
+
+.home-badge-rejected {
+    background: #fee2e2;
+    color: #991b1b;
 }

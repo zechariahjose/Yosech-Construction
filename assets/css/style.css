@@ -1,25 +1,10 @@
-body {
-    background-color: #f8f9fa;
-}
-
-.container {
-    max-width: 1100px;
-}
-
 .card {
-    border-radius: 1rem;
+    border-radius: var(--ysc-radius);
+    border-color: var(--ysc-border);
 }
 
 .card-title {
     margin-bottom: 1rem;
-}
-
-.navbar-brand {
-    font-weight: 700;
-}
-
-.btn-link {
-    text-decoration: none;
 }
 
 .showcase-card {
@@ -34,4 +19,3 @@ body {
 .badge {
     font-size: 0.85rem;
 }
-
