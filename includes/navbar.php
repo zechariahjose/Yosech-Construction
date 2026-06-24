@@ -23,6 +23,9 @@ $isStaff = $isLoggedIn && in_array($_SESSION['user_type'], ['Admin', 'Manager'])
                 <li class="nav-item">
                     <a class="nav-link<?= $currentPage === 'apply.php' ? ' active' : '' ?>" href="<?= BASE_URL ?>/apply.php">Apply</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link<?= $currentPage === 'contact.php' ? ' active' : '' ?>" href="<?= BASE_URL ?>/contact.php">Contact</a>
+                </li>
             </ul>
 
             <div class="ysc-nav-actions ms-lg-3">

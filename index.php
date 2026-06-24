@@ -122,7 +122,7 @@ if ($isLoggedIn) {
 <?php else: ?>
 <div class="home-hero guest-hero">
     <div class="container">
-        <h2 class="hero-title">Building the Future of Zamboanga del Norte</h2>
+        <h2 class="hero-title">Building the Future!</h2>
         <p class="hero-sub">Explore our project portfolio and equipment fleet. Sign up to submit applications and track your projects with Yosech Construction.</p>
         <div class="hero-actions">
             <a href="<?= BASE_URL ?>/projects.php" class="ysc-btn-outline btn-lg">View Projects</a>

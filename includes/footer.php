@@ -10,6 +10,7 @@
                 <ul class="ysc-footer-links">
                     <li><a href="<?= BASE_URL ?>/equipment.php">Equipment Fleet</a></li>
                     <li><a href="<?= BASE_URL ?>/projects.php">Project Portfolio</a></li>
+                    <li><a href="<?= BASE_URL ?>/contact.php">Contact Us</a></li>
                     <li><a href="#">Safety Standards</a></li>
                 </ul>
             </div>
@@ -25,7 +26,8 @@
                 <ul class="ysc-footer-links">
                     <li>Dipolog City, 7100</li>
                     <li><a href="tel:+630652124588">+63 (065) 212 4588</a></li>
-                    <li><a href="<?= BASE_URL ?>/apply.php">Contact Support</a></li>
+                    <li><a href="mailto:info@yosechconstruction.com">info@yosechconstruction.com</a></li>
+                    <li><a href="<?= BASE_URL ?>/contact.php">Contact Page</a></li>
                 </ul>
             </div>
         </div>

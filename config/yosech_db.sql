@@ -21,28 +21,65 @@ CREATE TABLE Employee (
     ContactNumber   VARCHAR(20)
 );
 
+CREATE TABLE EquipmentOffering (
+    EquipmentOfferingID INT AUTO_INCREMENT PRIMARY KEY,
+    Name VARCHAR(100) NOT NULL,
+    Model VARCHAR(100),
+    Description TEXT,
+    Specs TEXT,
+    HourlyRate DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    DailyRate DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    WeeklyRate DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    MonthlyRate DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    AvailabilityStatus ENUM('Available', 'Unavailable', 'Under Maintenance') NOT NULL DEFAULT 'Available',
+    ImageURL VARCHAR(255),
+    UNIQUE KEY uq_equipment_name (Name)
+);
+
+CREATE TABLE ProjectShowcase (
+    ProjectShowcaseID INT AUTO_INCREMENT PRIMARY KEY,
+    Title VARCHAR(150) NOT NULL,
+    Summary TEXT,
+    StartDate DATE,
+    EndDate DATE,
+    Status ENUM('Ongoing', 'Completed', 'On Hold', 'Cancelled') NOT NULL DEFAULT 'Ongoing',
+    ImageURL VARCHAR(255),
+    UNIQUE KEY uq_project_title (Title)
+);
+
 CREATE TABLE Equipment (
     EquipmentID             INT AUTO_INCREMENT PRIMARY KEY,
+    EquipmentOfferingID     INT NULL,
     Specification           TEXT,
     StartDate               DATE,
     EndDate                 DATE,
     AvailabilityStatus      ENUM('Available', 'Rented', 'Under Maintenance') NOT NULL DEFAULT 'Available',
     NeedsOperator           TINYINT(1) NOT NULL DEFAULT 0,
-    EquipmentPaymentStatus  ENUM('Unpaid', 'Paid', 'Partial') NOT NULL DEFAULT 'Unpaid'
+    EquipmentPaymentStatus  ENUM('Unpaid', 'Paid', 'Partial') NOT NULL DEFAULT 'Unpaid',
+    CONSTRAINT fk_equipment_offering FOREIGN KEY (EquipmentOfferingID) REFERENCES EquipmentOffering(EquipmentOfferingID)
+        ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 CREATE TABLE Application (
-    ApplicationID   INT AUTO_INCREMENT PRIMARY KEY,
-    UserID          INT NOT NULL,
-    EquipmentID     INT NOT NULL,
-    ApplicationType VARCHAR(100),
-    Description     TEXT,
-    SubmissionDate  DATE,
-    Status          ENUM('Pending', 'Approved', 'Rejected') NOT NULL DEFAULT 'Pending',
+    ApplicationID       INT AUTO_INCREMENT PRIMARY KEY,
+    UserID              INT NOT NULL,
+    EquipmentID         INT NULL,
+    ApplicationType     VARCHAR(100),
+    Description         TEXT,
+    ProjectTitle        VARCHAR(150),
+    ProjectLocation     VARCHAR(255),
+    ProposalBudget      DECIMAL(10,2),
+    ProjectStartDate    DATE,
+    ProjectEndDate      DATE,
+    RentalStartDate     DATE,
+    RentalEndDate       DATE,
+    NeedsOperator       TINYINT(1) NOT NULL DEFAULT 0,
+    SubmissionDate      DATE,
+    Status              ENUM('Pending', 'Approved', 'Rejected') NOT NULL DEFAULT 'Pending',
     CONSTRAINT fk_application_client    FOREIGN KEY (UserID)      REFERENCES Client(UserID)
         ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_application_equipment FOREIGN KEY (EquipmentID) REFERENCES Equipment(EquipmentID)
-        ON DELETE CASCADE ON UPDATE CASCADE
+        ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 CREATE TABLE Project (
@@ -71,32 +108,6 @@ CREATE TABLE Project_Update (
         ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_update_employee FOREIGN KEY (EmployeeID) REFERENCES Employee(EmployeeID)
         ON DELETE CASCADE ON UPDATE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS EquipmentOffering (
-    EquipmentOfferingID INT AUTO_INCREMENT PRIMARY KEY,
-    Name VARCHAR(100) NOT NULL,
-    Model VARCHAR(100),
-    Description TEXT,
-    Specs TEXT,
-    HourlyRate DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    DailyRate DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    WeeklyRate DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    MonthlyRate DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    AvailabilityStatus ENUM('Available', 'Unavailable', 'Under Maintenance') NOT NULL DEFAULT 'Available',
-    ImageURL VARCHAR(255),
-    UNIQUE KEY uq_equipment_name (Name)
-);
-
-CREATE TABLE IF NOT EXISTS ProjectShowcase (
-    ProjectShowcaseID INT AUTO_INCREMENT PRIMARY KEY,
-    Title VARCHAR(150) NOT NULL,
-    Summary TEXT,
-    StartDate DATE,
-    EndDate DATE,
-    Status ENUM('Ongoing', 'Completed', 'On Hold', 'Cancelled') NOT NULL DEFAULT 'Ongoing',
-    ImageURL VARCHAR(255),
-    UNIQUE KEY uq_project_title (Title)
 );
 
 INSERT IGNORE INTO EquipmentOffering (Name, Model, Description, Specs, HourlyRate, DailyRate, WeeklyRate, MonthlyRate, AvailabilityStatus, ImageURL)
@@ -139,13 +150,25 @@ UPDATE ProjectShowcase SET ImageURL = 'assets/projects/drainageCanal.png' WHERE 
 UPDATE ProjectShowcase SET ImageURL = 'assets/projects/2storyBuilding.jpg' WHERE Title = '3-Story Commercial Building';
 UPDATE ProjectShowcase SET ImageURL = 'assets/projects/tunnel.jpg' WHERE Title = 'Underground Conveyor Tunnel';
 
+INSERT INTO Equipment (EquipmentOfferingID, Specification, AvailabilityStatus, NeedsOperator, EquipmentPaymentStatus)
+SELECT eo.EquipmentOfferingID,
+       CONCAT(eo.Name, IF(eo.Model IS NOT NULL AND eo.Model != '', CONCAT(' (', eo.Model, ')'), '')),
+       CASE eo.AvailabilityStatus
+           WHEN 'Available' THEN 'Available'
+           WHEN 'Unavailable' THEN 'Rented'
+           ELSE 'Under Maintenance'
+       END,
+       0,
+       'Unpaid'
+FROM EquipmentOffering eo;
+
 DELIMITER $$
 
 CREATE TRIGGER trg_equipment_on_application_approved
 AFTER UPDATE ON Application
 FOR EACH ROW
 BEGIN
-    IF NEW.Status = 'Approved' AND OLD.Status != 'Approved' THEN
+    IF NEW.Status = 'Approved' AND OLD.Status != 'Approved' AND NEW.EquipmentID IS NOT NULL THEN
         UPDATE Equipment SET AvailabilityStatus = 'Rented' WHERE EquipmentID = NEW.EquipmentID;
     END IF;
 END$$
@@ -154,7 +177,7 @@ CREATE TRIGGER trg_equipment_on_application_rejected
 AFTER UPDATE ON Application
 FOR EACH ROW
 BEGIN
-    IF NEW.Status = 'Rejected' AND OLD.Status != 'Rejected' THEN
+    IF NEW.Status = 'Rejected' AND OLD.Status != 'Rejected' AND NEW.EquipmentID IS NOT NULL THEN
         UPDATE Equipment SET AvailabilityStatus = 'Available' WHERE EquipmentID = NEW.EquipmentID;
     END IF;
 END$$

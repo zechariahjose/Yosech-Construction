@@ -58,10 +58,13 @@ $result = mysqli_query(
                     </div>
 
                     <?php
-                    $rentalUrl = BASE_URL . '/apply.php?type=Equipment+Rental&equipment=' . urlencode($row['Name']);
-                    $loginUrl = BASE_URL . '/login.php?redirect=' . urlencode('apply.php?type=Equipment+Rental&equipment=' . urlencode($row['Name']));
+                    $isAvailable = $row['AvailabilityStatus'] === 'Available';
+                    $rentalUrl = BASE_URL . '/apply.php?type=Equipment+Rental&equipment_id=' . (int) $row['EquipmentOfferingID'];
+                    $loginUrl = BASE_URL . '/login.php?redirect=' . urlencode('apply.php?type=Equipment+Rental&equipment_id=' . (int) $row['EquipmentOfferingID']);
                     ?>
-                    <?php if ($isClient): ?>
+                    <?php if (!$isAvailable): ?>
+                        <span class="ysc-btn-outline w-100 text-center d-block" style="opacity:0.6;cursor:not-allowed;">Currently Unavailable</span>
+                    <?php elseif ($isClient): ?>
                         <a href="<?= $rentalUrl ?>" class="ysc-btn-primary w-100 text-center">Apply for Rental</a>
                     <?php else: ?>
                         <a href="<?= $loginUrl ?>" class="ysc-btn-primary w-100 text-center">Apply for Rental</a>
