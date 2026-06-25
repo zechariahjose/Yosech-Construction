@@ -1,0 +1,221 @@
+.settings-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 32px;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.settings-back {
+    font-size: 0.82rem;
+    color: #6b7280;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.settings-back:hover { color: #111827; }
+
+.settings-brand {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.settings-avatar-sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.settings-avatar-sm img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.settings-wrapper {
+    max-width: 900px;
+    margin: 36px auto;
+    padding: 0 20px;
+}
+
+.settings-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 4px;
+}
+
+.settings-subtitle {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-bottom: 28px;
+}
+
+.settings-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 24px;
+    height: 100%;
+}
+
+.settings-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.settings-card-icon {
+    width: 40px;
+    height: 40px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.settings-card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.settings-card-sub {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-top: 2px;
+}
+
+.settings-avatar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.settings-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.settings-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.settings-avatar-btn {
+    font-size: 0.8rem;
+    color: #1d4ed8;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.settings-avatar-btn:hover { text-decoration: underline; }
+
+.settings-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.settings-input {
+    font-size: 0.85rem;
+    border-color: #d1d5db;
+    border-radius: 6px;
+    padding: 8px 12px;
+}
+
+.settings-input:focus {
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 3px rgba(29,78,216,0.1);
+}
+
+.settings-btn {
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 8px 20px;
+}
+
+.settings-security-item {
+    padding: 16px 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.settings-security-item:last-child { border-bottom: none; }
+
+.settings-security-label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.settings-security-sub {
+    font-size: 0.78rem;
+    color: #9ca3af;
+    margin: 4px 0 10px;
+}
+
+.settings-change-btn {
+    font-size: 0.78rem;
+    border-radius: 6px;
+    padding: 5px 14px;
+}
+
+.settings-guest {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 0;
+    gap: 12px;
+    color: #9ca3af;
+    font-size: 0.88rem;
+}
+
+.settings-guest a { color: #1d4ed8; }
+
+.settings-footer {
+    background: #fff;
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+    padding: 20px;
+    font-size: 0.78rem;
+    color: #9ca3af;
+    margin-top: 48px;
+}
+
+.settings-footer a {
+    color: #6b7280;
+    text-decoration: none;
+    margin: 0 10px;
+}
+
+.settings-footer a:hover { color: #111827; }
