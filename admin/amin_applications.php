@@ -6,43 +6,6 @@ adminRequireLogin('admin/amin_applications.php');
 
 $adminEmployee = adminCurrentEmployee($conn);
 $adminPendingCount = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS total FROM Application WHERE Status = 'Pending'"))['total'];
-$employeeId = (int) $_SESSION['user_id'];
-
-if (isset($_POST['action'], $_POST['application_id'])) {
-    $applicationId = (int) $_POST['application_id'];
-
-    if ($_POST['action'] === 'approve') {
-        mysqli_query($conn, "UPDATE Application SET Status = 'Approved' WHERE ApplicationID = {$applicationId}");
-
-        $appResult = mysqli_query($conn, "SELECT * FROM Application WHERE ApplicationID = {$applicationId} LIMIT 1");
-        $appRow = mysqli_fetch_assoc($appResult);
-
-        if ($appRow && $appRow['ApplicationType'] === 'New Project') {
-            $exists = mysqli_query($conn, "SELECT ProjectID FROM Project WHERE ApplicationID = {$applicationId} LIMIT 1");
-            if (mysqli_num_rows($exists) === 0) {
-                $desc = mysqli_real_escape_string($conn, $appRow['Description'] ?? 'Approved project.');
-                $budget = $appRow['ProposalBudget'] !== null ? (float) $appRow['ProposalBudget'] : 'NULL';
-                $budgetSql = $budget === 'NULL' ? 'NULL' : number_format($budget, 2, '.', '');
-                $startDate = !empty($appRow['ProjectStartDate']) ? "'" . mysqli_real_escape_string($conn, $appRow['ProjectStartDate']) . "'" : 'NULL';
-                $endDate = !empty($appRow['ProjectEndDate']) ? "'" . mysqli_real_escape_string($conn, $appRow['ProjectEndDate']) . "'" : 'NULL';
-
-                mysqli_query($conn, "INSERT INTO Project (ApplicationID, ProposalDate, ProposalBudget, ProposalStatus, StartDate, EndDate, ProjectStatus, Description, ProjectPaymentStatus)
-                                     VALUES ({$applicationId}, CURDATE(), {$budgetSql}, 'Approved', {$startDate}, {$endDate}, 'Ongoing', '{$desc}', 'Unpaid')");
-                $projectId = (int) mysqli_insert_id($conn);
-
-                if ($projectId > 0) {
-                    $updateMsg = mysqli_real_escape_string($conn, 'Your project application has been approved. Your project is now active.');
-                    mysqli_query($conn, "INSERT INTO Project_Update (ProjectID, EmployeeID, Status, Description, UpdateDate)
-                                         VALUES ({$projectId}, {$employeeId}, 'Approved', '{$updateMsg}', CURDATE())");
-                }
-            }
-        }
-    }
-
-    if ($_POST['action'] === 'reject') {
-        mysqli_query($conn, "UPDATE Application SET Status = 'Rejected' WHERE ApplicationID = {$applicationId}");
-    }
-}
 
 $statusFilter = $_GET['status'] ?? '';
 $querySql = "
@@ -62,12 +25,13 @@ if ($statusFilter !== '') {
 $querySql .= " ORDER BY a.SubmissionDate DESC";
 $query = mysqli_query($conn, $querySql);
 
-$adminActiveNav = 'applications';
-$adminPageTitle = 'Applications';
-$adminPageSubtitle = 'Review client project proposals and equipment rental requests.';
+$adminActiveNav = 'history';
+$adminPageTitle = 'History';
+$adminPageSubtitle = 'View the full record of client project proposals and equipment rental requests. Approvals are handled by project managers.';
 $adminPageActions = '
     <a href="' . BASE_URL . '/admin/amin_applications.php?status=Pending" class="admin-btn admin-btn-outline">Pending only</a>
-    <a href="' . BASE_URL . '/admin/amin_applications.php" class="admin-btn admin-btn-outline">All applications</a>
+    <a href="' . BASE_URL . '/admin/amin_applications.php?status=Approved" class="admin-btn admin-btn-outline">Approved</a>
+    <a href="' . BASE_URL . '/admin/amin_applications.php" class="admin-btn admin-btn-outline">All records</a>
 ';
 
 include("../includes/admin/layout_start.php");
@@ -150,11 +114,9 @@ include("../includes/admin/layout_start.php");
             <div class="small" style="line-height:1.6;color:#475569;"><?= nl2br(htmlspecialchars($app['Description'])) ?></div>
         </div>
 
-        <form method="post" class="d-flex gap-2">
-            <input type="hidden" name="application_id" value="<?= (int) $app['ApplicationID'] ?>">
-            <button type="submit" name="action" value="approve" class="admin-btn admin-btn-success admin-btn-sm" <?= $app['Status'] === 'Approved' ? 'disabled' : '' ?>>Approve</button>
-            <button type="submit" name="action" value="reject" class="admin-btn admin-btn-danger admin-btn-sm" <?= $app['Status'] === 'Rejected' ? 'disabled' : '' ?>>Reject</button>
-        </form>
+        <?php if ($app['Status'] === 'Pending'): ?>
+            <p class="small text-muted mb-0">Awaiting project manager review.</p>
+        <?php endif; ?>
     </div>
     <?php endwhile; ?>
 </div>

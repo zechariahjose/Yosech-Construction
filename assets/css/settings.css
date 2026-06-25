@@ -219,3 +219,40 @@
 }
 
 .settings-footer a:hover { color: #111827; }
+
+.password-requirements {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.76rem;
+    color: #64748b;
+}
+
+.password-requirements li {
+    position: relative;
+    padding-left: 16px;
+    margin-bottom: 3px;
+}
+
+.password-requirements li:last-child {
+    margin-bottom: 0;
+}
+
+.password-requirements li::before {
+    content: '○';
+    position: absolute;
+    left: 0;
+    color: #cbd5e1;
+}
+
+.password-requirements li.met {
+    color: #059669;
+}
+
+.password-requirements li.met::before {
+    content: '●';
+    color: #059669;
+}

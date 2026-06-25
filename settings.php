@@ -1,6 +1,7 @@
 <?php
 include("includes/header.php");
 include("config/database.php");
+include("includes/password_helpers.php");
 
 $isClient = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'Client';
 $userID = $isClient ? $_SESSION['user_id'] : null;
@@ -82,8 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isClient) {
             $error = "Current password is incorrect.";
         } elseif ($newPassword !== $confirmPassword) {
             $error = "New passwords do not match.";
-        } elseif (strlen($newPassword) < 6) {
-            $error = "Password must be at least 6 characters.";
+        } elseif ($passwordError = passwordStrengthError($newPassword)) {
+            $error = $passwordError;
         } else {
             $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
             $pwStmt = mysqli_prepare($conn, "UPDATE Client SET Client_Password=? WHERE UserID=?");
@@ -202,7 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isClient) {
                     </div>
                     <div>
                         <div class="settings-card-title">Security</div>
-                        <div class="settings-card-sub">Manage your authentication methods.</div>
+                        <div class="settings-card-sub">Manage your account password.</div>
                     </div>
                 </div>
 
@@ -222,21 +223,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isClient) {
                             </div>
                             <div class="mb-2">
                                 <label class="settings-label">New Password</label>
-                                <input type="password" name="new_password" class="form-control settings-input" required>
+                                <input type="password" name="new_password" id="new_password" class="form-control settings-input" required minlength="8">
                             </div>
+                            <ul class="password-requirements" id="passwordRequirements">
+                                <li data-rule="length">At least 8 characters</li>
+                                <li data-rule="upper">One uppercase letter</li>
+                                <li data-rule="lower">One lowercase letter</li>
+                                <li data-rule="number">One number</li>
+                                <li data-rule="special">One special character (!@#$%…)</li>
+                            </ul>
                             <div class="mb-3">
                                 <label class="settings-label">Confirm New Password</label>
-                                <input type="password" name="confirm_password" class="form-control settings-input" required>
+                                <input type="password" name="confirm_password" class="form-control settings-input" required minlength="8">
                             </div>
                             <button type="submit" name="change_password" class="btn btn-primary btn-sm w-100 settings-btn">Update Password</button>
                         </form>
                     </div>
-                </div>
-
-                <div class="settings-security-item">
-                    <div class="settings-security-label">2FA Status</div>
-                    <p class="settings-security-sub">Two-factor authentication is not yet available.</p>
-                    <button class="btn btn-outline-secondary btn-sm settings-change-btn" disabled>Coming Soon</button>
                 </div>
             </div>
         </div>
@@ -271,6 +273,32 @@ function togglePasswordForm() {
     const form = document.getElementById('passwordForm');
     form.style.display = form.style.display === 'none' ? 'block' : 'none';
 }
+
+(function () {
+    var passwordInput = document.getElementById('new_password');
+    var requirements = document.getElementById('passwordRequirements');
+    if (!passwordInput || !requirements) return;
+
+    var rules = {
+        length: function (v) { return v.length >= 8; },
+        upper: function (v) { return /[A-Z]/.test(v); },
+        lower: function (v) { return /[a-z]/.test(v); },
+        number: function (v) { return /[0-9]/.test(v); },
+        special: function (v) { return /[^A-Za-z0-9]/.test(v); }
+    };
+
+    function updateRequirements() {
+        var value = passwordInput.value;
+        requirements.querySelectorAll('li').forEach(function (item) {
+            var rule = item.dataset.rule;
+            var met = rules[rule] && rules[rule](value);
+            item.classList.toggle('met', met);
+        });
+    }
+
+    passwordInput.addEventListener('input', updateRequirements);
+    updateRequirements();
+})();
 </script>
 
 <?php include("includes/footer.php"); ?>

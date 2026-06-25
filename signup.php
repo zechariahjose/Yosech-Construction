@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 include("config/database.php");
+include("includes/password_helpers.php");
 
 if (!defined('BASE_URL')) {
     $scriptPath = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
@@ -47,8 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Please fill in all required fields.';
     } elseif (!filter_var($form['email'], FILTER_VALIDATE_EMAIL)) {
         $error = 'Please enter a valid email address.';
-    } elseif (strlen($password) < 8) {
-        $error = 'Password must be at least 8 characters.';
+    } elseif ($passwordError = passwordStrengthError($password)) {
+        $error = $passwordError;
     } elseif ($password !== $confirm) {
         $error = 'Passwords do not match.';
     } else {
@@ -165,6 +166,14 @@ include("includes/navbar.php");
                     </div>
                 </div>
 
+                <ul class="password-requirements" id="passwordRequirements">
+                    <li data-rule="length">At least 8 characters</li>
+                    <li data-rule="upper">One uppercase letter</li>
+                    <li data-rule="lower">One lowercase letter</li>
+                    <li data-rule="number">One number</li>
+                    <li data-rule="special">One special character (!@#$%…)</li>
+                </ul>
+
                 <button type="submit" class="auth-submit">
                     Create Account
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -179,5 +188,33 @@ include("includes/navbar.php");
         </div>
     </div>
 </div>
+
+<script>
+(function () {
+    var passwordInput = document.getElementById('password');
+    var requirements = document.getElementById('passwordRequirements');
+    if (!passwordInput || !requirements) return;
+
+    var rules = {
+        length: function (v) { return v.length >= 8; },
+        upper: function (v) { return /[A-Z]/.test(v); },
+        lower: function (v) { return /[a-z]/.test(v); },
+        number: function (v) { return /[0-9]/.test(v); },
+        special: function (v) { return /[^A-Za-z0-9]/.test(v); }
+    };
+
+    function updateRequirements() {
+        var value = passwordInput.value;
+        requirements.querySelectorAll('li').forEach(function (item) {
+            var rule = item.dataset.rule;
+            var met = rules[rule] && rules[rule](value);
+            item.classList.toggle('met', met);
+        });
+    }
+
+    passwordInput.addEventListener('input', updateRequirements);
+    updateRequirements();
+})();
+</script>
 
 <?php include("includes/footer.php"); ?>

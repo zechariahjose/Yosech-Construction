@@ -256,6 +256,43 @@
     color: var(--ysc-border);
 }
 
+.password-requirements {
+    list-style: none;
+    margin: 0 0 20px;
+    padding: 12px 14px;
+    background: var(--ysc-border-light, #f8fafc);
+    border: 1px solid var(--ysc-border);
+    border-radius: 8px;
+    font-size: 0.78rem;
+    color: var(--ysc-muted-light, #64748b);
+}
+
+.password-requirements li {
+    position: relative;
+    padding-left: 18px;
+    margin-bottom: 4px;
+}
+
+.password-requirements li:last-child {
+    margin-bottom: 0;
+}
+
+.password-requirements li::before {
+    content: '○';
+    position: absolute;
+    left: 0;
+    color: #cbd5e1;
+}
+
+.password-requirements li.met {
+    color: #059669;
+}
+
+.password-requirements li.met::before {
+    content: '●';
+    color: #059669;
+}
+
 @media (max-width: 768px) {
     .auth-deco {
         display: none;

@@ -54,12 +54,9 @@ $adminRoleLabel = strtoupper($adminEmployee['UserType'] ?? $_SESSION['user_type'
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M2 20h20M5 20V8l7-4 7 4v12"/></svg>
                 Projects
             </a>
-            <a href="<?= BASE_URL ?>/admin/amin_applications.php" class="admin-nav-link<?= $adminActiveNav === 'applications' ? ' active' : '' ?>">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
-                Applications
-                <?php if (!empty($adminPendingCount) && (int) $adminPendingCount > 0): ?>
-                    <span class="admin-nav-badge"><?= (int) $adminPendingCount ?></span>
-                <?php endif; ?>
+            <a href="<?= BASE_URL ?>/admin/amin_applications.php" class="admin-nav-link<?= $adminActiveNav === 'history' ? ' active' : '' ?>">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M12 8v4l3 3M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+                History
             </a>
             <a href="<?= BASE_URL ?>/admin/amin_clients.php" class="admin-nav-link<?= $adminActiveNav === 'clients' ? ' active' : '' ?>">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -76,9 +73,9 @@ $adminRoleLabel = strtoupper($adminEmployee['UserType'] ?? $_SESSION['user_type'
         </nav>
 
         <div class="admin-sidebar-footer">
-            <a href="<?= BASE_URL ?>/admin/amin_applications.php?status=Pending" class="admin-btn-new">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-                Review Applications
+            <a href="<?= BASE_URL ?>/admin/amin_applications.php" class="admin-btn-new">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+                View History
             </a>
             <a href="<?= BASE_URL ?>/logout.php" class="admin-signout">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
@@ -97,7 +94,7 @@ $adminRoleLabel = strtoupper($adminEmployee['UserType'] ?? $_SESSION['user_type'
             </form>
 
             <div class="admin-topbar-actions">
-                <a href="<?= BASE_URL ?>/admin/amin_applications.php?status=Pending" class="admin-icon-btn" title="Pending applications">
+                <a href="<?= BASE_URL ?>/admin/amin_applications.php?status=Pending" class="admin-icon-btn" title="Pending applications history">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                     <?php if (!empty($adminPendingCount) && (int) $adminPendingCount > 0): ?>
                         <span class="admin-icon-dot"></span>

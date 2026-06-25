@@ -96,8 +96,7 @@ $adminActiveNav = 'dashboard';
 $adminPageTitle = 'Admin Dashboard';
 $adminPageSubtitle = 'Real-time operational oversight for Yosech Construction.';
 $adminPageActions = '
-    <a href="' . BASE_URL . '/admin/amin_applications.php" class="admin-btn admin-btn-outline">Review Applications</a>
-    <a href="' . BASE_URL . '/index.php" class="admin-btn admin-btn-primary" target="_blank" rel="noopener">View Public Site</a>
+    <a href="' . BASE_URL . '/admin/amin_applications.php" class="admin-btn admin-btn-outline">View History</a>
 ';
 
 include("../includes/admin/layout_start.php");

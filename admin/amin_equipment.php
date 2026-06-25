@@ -113,14 +113,14 @@ include("../includes/admin/layout_start.php");
                         <?php endif; ?>
                     </td>
                     <td>
-                        <form method="post" class="d-flex gap-2">
+                        <form method="post" class="d-flex gap-2 equipment-status-form">
                             <input type="hidden" name="equipment_id" value="<?= (int) $row['EquipmentID'] ?>">
-                            <select name="availability_status" style="min-width:140px;">
+                            <select name="availability_status" class="equipment-status-select" data-original="<?= htmlspecialchars($row['AvailabilityStatus']) ?>" style="min-width:140px;">
                                 <option value="Available" <?= $row['AvailabilityStatus'] === 'Available' ? 'selected' : '' ?>>Available</option>
                                 <option value="Rented" <?= $row['AvailabilityStatus'] === 'Rented' ? 'selected' : '' ?>>Rented</option>
                                 <option value="Under Maintenance" <?= $row['AvailabilityStatus'] === 'Under Maintenance' ? 'selected' : '' ?>>Under Maintenance</option>
                             </select>
-                            <button type="submit" class="admin-btn admin-btn-primary admin-btn-sm">Update</button>
+                            <button type="submit" class="admin-btn admin-btn-primary admin-btn-sm equipment-update-btn" disabled>Update</button>
                         </form>
                     </td>
                 </tr>
@@ -129,5 +129,21 @@ include("../includes/admin/layout_start.php");
         </table>
     <?php endif; ?>
 </div>
+
+<script>
+document.querySelectorAll('.equipment-status-form').forEach(function (form) {
+    var select = form.querySelector('.equipment-status-select');
+    var button = form.querySelector('.equipment-update-btn');
+
+    function syncButtonState() {
+        var changed = select.value !== select.dataset.original;
+        button.disabled = !changed;
+        button.classList.toggle('admin-btn-disabled', !changed);
+    }
+
+    select.addEventListener('change', syncButtonState);
+    syncButtonState();
+});
+</script>
 
 <?php include("../includes/admin/layout_end.php"); ?>

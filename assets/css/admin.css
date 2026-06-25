@@ -379,6 +379,21 @@
     font-size: 0.78rem;
 }
 
+.admin-btn:disabled,
+.admin-btn-disabled {
+    background: #94a3b8 !important;
+    border-color: #94a3b8 !important;
+    color: #fff !important;
+    cursor: not-allowed;
+    opacity: 0.85;
+}
+
+.admin-btn:disabled:hover,
+.admin-btn-disabled:hover {
+    background: #94a3b8 !important;
+    color: #fff !important;
+}
+
 /* KPI cards */
 .admin-kpi-grid {
     display: grid;
