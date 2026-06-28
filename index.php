@@ -36,7 +36,7 @@ if ($isLoggedIn) {
 
 <!-- Hero -->
 <section class="home-hero logged-hero">
-    <div class="home-hero-bg" style="background-image:url('<?= BASE_URL ?>/assets/projects/roadConcreting.jpg');"></div>
+    <div class="home-hero-bg" style="background-image:url('<?= BASE_URL ?>/assets/equipment/equipmentfleet.jpg');"></div>
     <div class="home-hero-overlay"></div>
     <div class="container home-hero-content">
         <div class="hero-eyebrow">Client Dashboard</div>
@@ -135,7 +135,7 @@ if ($isLoggedIn) {
 
 <!-- ── Hero ──────────────────────────────────────────────── -->
 <section class="home-hero">
-    <div class="home-hero-bg"></div>
+    <div class="home-hero-bg" style="background-image:url('<?= BASE_URL ?>/assets/equipment/equipmentfleet.jpg');"></div>
     <div class="home-hero-overlay"></div>
     <div class="container home-hero-content">
         <div class="hero-eyebrow">Your Trusted Construction Partner</div>
@@ -157,8 +157,8 @@ if ($isLoggedIn) {
                 <img src="<?= BASE_URL ?>/assets/projects/multiPurposeBuilding.jpg"
                      alt="Multi-purpose building project"
                      class="standard-img-main">
-                <img src="<?= BASE_URL ?>/assets/projects/drainageCanal.png"
-                     alt="Drainage canal project"
+                <img src="<?= BASE_URL ?>/assets/projects/drainagesystem.jpg"
+                     alt="Drainage system project"
                      class="standard-img-sub">
                 <img src="<?= BASE_URL ?>/assets/projects/tunnel.jpg"
                      alt="Tunnel project"
@@ -266,10 +266,10 @@ if ($isLoggedIn) {
                 </div>
             </div>
             <div class="project-card">
-                <img src="<?= BASE_URL ?>/assets/projects/floodBarrier.png" alt="Flood Barrier" class="project-card-img">
+                <img src="<?= BASE_URL ?>/assets/projects/drainagesystem.jpg" alt="Drainage System" class="project-card-img">
                 <div class="project-card-body">
                     <div class="project-card-type">Flood Control</div>
-                    <div class="project-card-name">Flood Barrier System</div>
+                    <div class="project-card-name">Drainage System</div>
                 </div>
             </div>
             <div class="project-card">
