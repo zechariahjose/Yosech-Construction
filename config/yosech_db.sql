@@ -128,9 +128,9 @@ VALUES
 ('Drainage Canal – Zone 3 Main Street', 'This project improved water flow during storms, helping prevent frequent flooding. It included excavation, canal lining, and safety barriers.', '2023-11-20', '2024-01-10', 'Completed', 'assets/projects/drainageCanal.png'),
 ('2-Story Commercial Building', 'A modern two-story structure built to accommodate retail and office spaces. This project showcases our capacity for vertical construction, combining structural integrity with clean design.', '2023-08-15', '2023-12-01', 'Completed', 'assets/projects/2storyBuilding.jpg'),
 ('Road Concreting', 'A major road improvement project aimed at enhancing transportation and accessibility in the area. Once completed, this concrete road will reduce travel time and improve road safety for both commuters and delivery vehicles.', '2025-04-15', NULL, 'Ongoing', 'assets/projects/roadConcreting.jpg'),
-('Drainage System', 'Currently under construction, this drainage project is being implemented to prevent flooding and waterlogging in low-lying residential zones. The system is designed to improve runoff flow and enhance flood protection during heavy rains.', '2025-05-05', NULL, 'Ongoing', 'assets/projects/drainageCanal.png'),
+('Drainage System', 'Currently under construction, this drainage project is being implemented to prevent flooding and waterlogging in low-lying residential zones. The system is designed to improve runoff flow and enhance flood protection during heavy rains.', '2025-05-05', '2025-12-16', 'Completed', 'assets/projects/drainageCanal.png'),
 ('3-Story Commercial Building', 'A modern commercial building under development, built to accommodate shops, offices, and rental spaces. The structure is designed with energy efficiency and accessibility in mind, and will serve as a hub for growing businesses in the area.', '2025-02-10', NULL, 'Ongoing', 'assets/projects/2storyBuilding.jpg'),
-('Underground Conveyor Tunnel', 'A specialized infrastructure project designed to support the efficient transport of materials across an industrial facility. The tunnel includes reinforced walls and integrated safety systems to ensure long-term durability and smooth operation.', '2025-11-20', NULL, 'Ongoing', 'assets/projects/tunnel.jpg');
+('Underground Conveyor Tunnel', 'A specialized infrastructure project designed to support the efficient transport of materials across an industrial facility. The tunnel includes reinforced walls and integrated safety systems to ensure long-term durability and smooth operation.', '2025-11-20', '2026-03-20', 'Completed', 'assets/projects/tunnel.jpg');
 
 UPDATE EquipmentOffering SET ImageURL = 'assets/equipment/backhoe.jpg' WHERE Name = 'Backhoe';
 UPDATE EquipmentOffering SET ImageURL = 'assets/equipment/grader.jpg' WHERE Name = 'Grader';
@@ -189,3 +189,9 @@ VALUES ('Admin', 'admin', 'admin123', 'admin@yosechconstruction.com', NULL);
 
 INSERT IGNORE INTO Employee (UserType, Username, Password, Email, ContactNumber)
 VALUES ('Manager', 'manager', 'manager123', 'manager@yosechconstruction.com', NULL);
+
+-- Correct project statuses (runs safely on both fresh and existing databases)
+UPDATE ProjectShowcase SET Status = 'Completed', EndDate = '2025-12-16'  WHERE Title = 'Drainage System';
+UPDATE ProjectShowcase SET Status = 'Completed', EndDate = '2026-03-20'  WHERE Title = 'Underground Conveyor Tunnel';
+UPDATE ProjectShowcase SET Status = 'Ongoing',   EndDate = NULL           WHERE Title = 'Road Concreting';
+UPDATE ProjectShowcase SET Status = 'Ongoing',   EndDate = NULL           WHERE Title = '3-Story Commercial Building';
