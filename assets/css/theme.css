@@ -50,17 +50,16 @@ body > nav + link + .container {
 .ysc-topbar {
     background: #fff;
     border-bottom: 1px solid #e5e7eb;
-    padding: 0;
     position: sticky;
     top: 0;
     z-index: 1030;
-    height: 64px;
-    display: flex;
-    align-items: center;
 }
 
-.ysc-topbar .container {
-    height: 100%;
+.ysc-topbar-inner {
+    display: flex;
+    align-items: center;
+    height: 64px;
+    gap: 0;
 }
 
 .ysc-topbar-brand {
@@ -88,13 +87,14 @@ body > nav + link + .container {
     border-radius: 4px;
 }
 
+/* Nav links */
 .ysc-topbar-nav {
     display: flex;
     align-items: center;
     list-style: none;
     padding: 0;
-    margin: 0 0 0 36px;
-    gap: 4px;
+    margin: 0 0 0 32px;
+    gap: 2px;
 }
 
 .ysc-topbar-nav li a {
@@ -106,6 +106,7 @@ body > nav + link + .container {
     text-decoration: none;
     padding: 8px 14px;
     border-radius: 4px;
+    display: block;
     transition: color .15s, background .15s;
 }
 
@@ -114,13 +115,15 @@ body > nav + link + .container {
     background: #f3f4f6;
 }
 
+/* Action buttons */
 .ysc-topbar-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     margin-left: auto;
 }
 
+/* Ghost / text button */
 .ysc-btn-ghost {
     display: inline-flex;
     align-items: center;
@@ -133,9 +136,10 @@ body > nav + link + .container {
     text-decoration: none;
     padding: 8px 14px;
     border-radius: 4px;
-    transition: color .15s, background .15s;
     background: transparent;
     border: none;
+    cursor: pointer;
+    transition: color .15s, background .15s;
 }
 
 .ysc-btn-ghost:hover {
@@ -143,6 +147,11 @@ body > nav + link + .container {
     background: #f3f4f6;
 }
 
+.ysc-icon-btn {
+    padding: 8px 10px;
+}
+
+/* Outline dark button */
 .ysc-btn-outline-dark {
     display: inline-flex;
     align-items: center;
@@ -165,6 +174,7 @@ body > nav + link + .container {
     color: #fff;
 }
 
+/* Orange CTA button */
 .ysc-btn-orange {
     display: inline-flex;
     align-items: center;
@@ -177,7 +187,7 @@ body > nav + link + .container {
     background: #f97316;
     border: 1.5px solid #f97316;
     border-radius: 4px;
-    padding: 8px 20px;
+    padding: 9px 20px;
     text-decoration: none;
     transition: background .15s, border-color .15s;
 }
@@ -188,15 +198,17 @@ body > nav + link + .container {
     color: #fff;
 }
 
-/* Hamburger toggler */
+/* Hamburger — hidden on desktop */
 .ysc-toggler {
     display: none;
     flex-direction: column;
+    justify-content: center;
     gap: 5px;
     background: none;
     border: none;
     padding: 6px;
     cursor: pointer;
+    margin-left: auto;
 }
 
 .ysc-toggler span {
@@ -205,8 +217,65 @@ body > nav + link + .container {
     height: 2px;
     background: #111;
     border-radius: 2px;
+    transition: transform .2s, opacity .2s;
 }
 
+/* Animated X when open */
+.ysc-toggler.is-open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.ysc-toggler.is-open span:nth-child(2) { opacity: 0; }
+.ysc-toggler.is-open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* Mobile drawer — hidden by default */
+.ysc-mobile-menu {
+    display: none;
+    background: #fff;
+    border-top: 1px solid #e5e7eb;
+    padding: 16px 20px 20px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.07);
+}
+
+.ysc-mobile-menu.is-open {
+    display: block;
+}
+
+.ysc-mobile-nav {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px;
+}
+
+.ysc-mobile-nav li a {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #333;
+    text-decoration: none;
+    padding: 11px 4px;
+    border-bottom: 1px solid #f3f4f6;
+    transition: color .15s;
+}
+
+.ysc-mobile-nav li a:hover { color: #f97316; }
+.ysc-mobile-nav li:last-child a { border-bottom: none; }
+
+.ysc-mobile-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 12px;
+}
+
+.ysc-mobile-actions .ysc-btn-ghost,
+.ysc-mobile-actions .ysc-btn-outline-dark,
+.ysc-mobile-actions .ysc-btn-orange {
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+}
+
+/* Legacy alias kept for other pages */
 .ysc-nav-actions {
     display: flex;
     align-items: center;
@@ -569,52 +638,13 @@ html {
 }
 
 @media (max-width: 991px) {
+    .ysc-topbar-nav,
+    .ysc-topbar-actions {
+        display: none;
+    }
+
     .ysc-toggler {
         display: flex;
-    }
-
-    .ysc-topbar .collapse {
-        position: absolute;
-        top: 64px;
-        left: 0;
-        right: 0;
-        background: #fff;
-        border-bottom: 1px solid #e5e7eb;
-        padding: 16px 20px 20px;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0;
-        box-shadow: 0 8px 24px rgba(0,0,0,.07);
-    }
-
-    .ysc-topbar .collapse.show {
-        display: flex !important;
-    }
-
-    .ysc-topbar-nav {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0;
-        margin: 0 0 12px;
-        width: 100%;
-    }
-
-    .ysc-topbar-nav li { width: 100%; }
-    .ysc-topbar-nav li a { display: block; padding: 10px 4px; }
-
-    .ysc-topbar-actions {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-        margin-left: 0;
-        width: 100%;
-    }
-
-    .ysc-btn-ghost,
-    .ysc-btn-outline-dark,
-    .ysc-btn-orange {
-        width: 100%;
-        justify-content: center;
     }
 
     .ysc-btn-outline,
