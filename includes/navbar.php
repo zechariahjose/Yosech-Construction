@@ -27,7 +27,7 @@
                 <a href="<?= BASE_URL ?>/admin/amin_dashboard.php" class="ysc-btn-ghost">Admin Panel</a>
                 <a href="<?= BASE_URL ?>/logout.php" class="ysc-btn-outline-dark">Logout</a>
             <?php else: ?>
-                <a href="<?= BASE_URL ?>/login.php" class="ysc-btn-ghost">Client Login</a>
+                <a href="<?= BASE_URL ?>/login.php" class="ysc-btn-ghost">Login</a>
                 <a href="<?= BASE_URL ?>/apply.php" class="ysc-btn-orange">Start Your Project →</a>
             <?php endif; ?>
         </div>
