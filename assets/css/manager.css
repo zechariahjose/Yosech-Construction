@@ -1,64 +1,66 @@
-/**
- * Project Manager console — same design system as admin.css,
- * with identity markers so users always know which console they are in.
- */
-
-/* Sidebar identity */
 .manager-sidebar {
-    border-right: 1px solid var(--admin-border);
-    border-left: 4px solid #475569;
+    border-right: none;
 }
 
 .manager-console-banner {
-    background: linear-gradient(135deg, #475569 0%, #64748b 100%);
+    background: var(--ysc-primary);  
     color: #fff;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     text-align: center;
-    padding: 8px 12px;
+    padding: 9px 12px;
 }
 
 .manager-brand-icon {
-    background: #f1f5f9;
-    color: #475569;
+    background: rgba(255,255,255,.1);
+    color: var(--ysc-accent, #a5b4fc);
 }
 
 .manager-btn-new {
-    background: #475569;
+    background: rgba(107,127,148,.25);
+    color: rgba(255,255,255,.8);
+    border-color: rgba(107,127,148,.4);
 }
 
 .manager-btn-new:hover {
-    background: #334155;
+    background: rgba(107,127,148,.4);
+    color: #fff;
+    border-color: rgba(107,127,148,.5);
 }
+
+.manager-body .admin-nav-link.active {
+    background: rgba(107,127,148,.2);
+    color: #a5b4fc;
+}
+
 
 .manager-user-avatar {
-    background: linear-gradient(135deg, #475569, #334155);
+    background: var(--ysc-primary);
 }
 
-/* Topbar console pill */
 .console-identity {
     flex-shrink: 0;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    padding: 6px 12px;
-    border-radius: 999px;
+    padding: 5px 12px;
+    border-radius: 4px;
     border: 1px solid transparent;
 }
 
 .console-identity-pm {
-    background: #f1f5f9;
-    color: #334155;
-    border-color: #cbd5e1;
+    background: var(--ysc-primary-light);
+    color: var(--ysc-primary);
+    border-color: #c8d4df;
 }
 
 .console-identity-admin {
-    background: var(--admin-primary-soft);
-    color: var(--admin-primary);
-    border-color: #bfdbfe;
+    background: rgba(249,115,22,.1);
+    color: #ea6c0a;
+    border-color: rgba(249,115,22,.25);
 }
 
 .admin-topbar {
@@ -69,27 +71,29 @@
     flex: 1;
 }
 
-/* Settings-only helpers */
 .manager-view-toggle {
     display: inline-flex;
-    border: 1px solid var(--admin-border);
-    border-radius: 8px;
+    border: 1px solid var(--ysc-border);
+    border-radius: var(--ysc-radius);
     overflow: hidden;
 }
 
 .manager-view-toggle label {
     padding: 8px 16px;
-    font-size: 0.82rem;
-    font-weight: 600;
+    font-size: 0.78rem;
+    font-weight: 700;
     cursor: pointer;
     margin: 0;
-    background: #fff;
-    color: var(--admin-muted);
+    background: var(--ysc-surface);
+    color: var(--ysc-muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition: background var(--ysc-transition), color var(--ysc-transition);
 }
 
 .manager-view-toggle label:has(input:checked) {
-    background: var(--admin-primary-soft);
-    color: var(--admin-primary);
+    background: var(--ysc-primary-light);
+    color: var(--ysc-primary);
 }
 
 .manager-view-toggle input {
@@ -98,31 +102,13 @@
 
 .manager-check-row {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 10px;
-    margin-bottom: 12px;
-    font-size: 0.86rem;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--ysc-border-light);
+    font-size: 0.84rem;
 }
 
-.manager-check-row input {
-    margin-top: 3px;
-}
-
-.admin-badge-rental {
-    background: #ffedd5;
-    color: #9a3412;
-}
-
-.manager-kpi-warn {
-    border-left: 4px solid var(--admin-warning);
-}
-
-.manager-kpi-ok {
-    border-left: 4px solid var(--admin-success);
-}
-
-.admin-kpi-card.manager-kpi-warn,
-.admin-kpi-card.manager-kpi-ok {
-    border-left-width: 4px;
-    border-left-style: solid;
+.manager-check-row:last-child {
+    border-bottom: none;
 }
