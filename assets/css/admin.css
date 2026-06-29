@@ -1,12 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-/* ============================================================
-   ADMIN + MANAGER CONSOLE — aligned to Yosech website design
-   Colors: #111 dark · #6b7f94 primary · #f97316 orange accent
-   ============================================================ */
 
 :root {
-    /* Site-matched tokens */
+
     --ysc-primary:        #6b7f94;
     --ysc-primary-hover:  #5a6d80;
     --ysc-primary-light:  #eef2f6;
@@ -27,15 +23,13 @@
     --ysc-shadow-md:      0 4px 12px rgba(0,0,0,.07);
     --ysc-transition:     0.18s ease;
 
-    /* Functional status colors (kept neutral/semantic) */
     --admin-success:  #059669;
     --admin-danger:   #dc2626;
     --admin-warning:  #d97706;
 
-    /* Layout */
+
     --admin-sidebar-width: 240px;
 
-    /* Legacy aliases (used by PHP pages — do not remove) */
     --admin-bg:           var(--ysc-bg);
     --admin-surface:      var(--ysc-surface);
     --admin-sidebar:      var(--ysc-surface);
@@ -52,7 +46,7 @@
 
 * { box-sizing: border-box; }
 
-/* ── Base ───────────────────────────────────────────────────── */
+
 .admin-body {
     margin: 0;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -66,7 +60,7 @@
     min-height: 100vh;
 }
 
-/* ── Sidebar ────────────────────────────────────────────────── */
+
 .admin-sidebar {
     width: var(--admin-sidebar-width);
     background: #111;
@@ -79,7 +73,7 @@
 }
 
 .admin-console-sidebar {
-    /* no colored left border — identity comes from banner instead */
+ 
 }
 
 .admin-console-banner {
@@ -174,7 +168,7 @@
     border-radius: 999px;
 }
 
-/* Sidebar footer */
+
 .admin-sidebar-footer {
     padding: 16px;
     border-top: 1px solid rgba(255,255,255,.08);
@@ -220,7 +214,7 @@
 
 .admin-signout:hover { color: rgba(255,255,255,.7); }
 
-/* ── Main area ──────────────────────────────────────────────── */
+
 .admin-main {
     flex: 1;
     margin-left: var(--admin-sidebar-width);
@@ -229,7 +223,7 @@
     min-width: 0;
 }
 
-/* Topbar */
+
 .admin-topbar {
     background: var(--ysc-surface);
     border-bottom: 1px solid var(--ysc-border);
@@ -346,7 +340,7 @@
     flex-shrink: 0;
 }
 
-/* Console pill in topbar */
+
 .console-identity {
     flex-shrink: 0;
     font-size: 0.68rem;
@@ -370,7 +364,7 @@
     border-color: rgba(249,115,22,.25);
 }
 
-/* ── Content wrapper ────────────────────────────────────────── */
+
 .admin-content {
     padding: 28px;
 }
@@ -404,7 +398,7 @@
     flex-shrink: 0;
 }
 
-/* ── Buttons ────────────────────────────────────────────────── */
+
 .admin-btn {
     display: inline-flex;
     align-items: center;
@@ -472,7 +466,7 @@
     opacity: 0.8;
 }
 
-/* ── KPI cards ──────────────────────────────────────────────── */
+
 .admin-kpi-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -536,14 +530,14 @@
     justify-content: center;
 }
 
-/* ── Layout grid ────────────────────────────────────────────── */
+
 .admin-grid-main {
     display: grid;
     grid-template-columns: 1fr 300px;
     gap: 18px;
 }
 
-/* ── Panel ──────────────────────────────────────────────────── */
+
 .admin-panel {
     background: var(--ysc-surface);
     border: 1px solid var(--ysc-border);
@@ -580,7 +574,7 @@
 
 .admin-panel-link:hover { color: var(--ysc-primary-hover); }
 
-/* ── Table ──────────────────────────────────────────────────── */
+
 .admin-table {
     width: 100%;
     border-collapse: collapse;
@@ -620,7 +614,7 @@
     margin-top: 2px;
 }
 
-/* ── Badges ─────────────────────────────────────────────────── */
+
 .admin-badge {
     display: inline-block;
     font-size: 0.65rem;
@@ -640,7 +634,7 @@
 .admin-badge-approved   { background: #ecfdf5; color: #047857; }
 .admin-badge-rejected   { background: #fef2f2; color: #991b1b; }
 
-/* ── Activity feed ──────────────────────────────────────────── */
+
 .admin-activity-list {
     list-style: none;
     margin: 0;
@@ -675,7 +669,7 @@
     letter-spacing: 0.05em;
 }
 
-/* ── Status panel ───────────────────────────────────────────── */
+
 .admin-status-list {
     padding: 16px 20px;
 }
@@ -731,7 +725,7 @@
     line-height: 1.6;
 }
 
-/* ── Card grid (sub-pages) ──────────────────────────────────── */
+
 .admin-card-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -753,7 +747,7 @@
     color: var(--ysc-text);
 }
 
-/* ── Form fields ────────────────────────────────────────────── */
+
 .admin-field {
     margin-bottom: 14px;
 }
@@ -790,7 +784,7 @@
     box-shadow: 0 0 0 3px rgba(107,127,148,.14);
 }
 
-/* ── Misc ───────────────────────────────────────────────────── */
+
 .admin-empty {
     padding: 48px 24px;
     text-align: center;
@@ -845,7 +839,7 @@
     margin: 16px 0;
 }
 
-/* ── Responsive ─────────────────────────────────────────────── */
+
 @media (max-width: 1200px) {
     .admin-kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .admin-grid-main { grid-template-columns: 1fr; }

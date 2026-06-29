@@ -1,16 +1,9 @@
-/* ============================================================
-   PROJECT MANAGER CONSOLE — identity overrides on top of admin.css
-   Distinguishes PM from Admin while sharing the same design system
-   ============================================================ */
-
-/* Sidebar: darker orange-accent top bar for PM vs admin's orange */
 .manager-sidebar {
     border-right: none;
-    /* PM sidebar shares the same dark #111 base */
 }
 
 .manager-console-banner {
-    background: var(--ysc-primary);   /* steel-blue for PM */
+    background: var(--ysc-primary);  
     color: #fff;
     font-size: 0.65rem;
     font-weight: 800;
@@ -25,7 +18,6 @@
     color: var(--ysc-accent, #a5b4fc);
 }
 
-/* PM's "new" button uses primary instead of orange */
 .manager-btn-new {
     background: rgba(107,127,148,.25);
     color: rgba(255,255,255,.8);
@@ -38,18 +30,16 @@
     border-color: rgba(107,127,148,.5);
 }
 
-/* PM active nav item uses primary blue instead of orange */
 .manager-body .admin-nav-link.active {
     background: rgba(107,127,148,.2);
     color: #a5b4fc;
 }
 
-/* PM user avatar — different from admin's */
+
 .manager-user-avatar {
     background: var(--ysc-primary);
 }
 
-/* Topbar console pill — PM variant */
 .console-identity {
     flex-shrink: 0;
     font-size: 0.68rem;
@@ -73,7 +63,6 @@
     border-color: rgba(249,115,22,.25);
 }
 
-/* Topbar search + gap */
 .admin-topbar {
     gap: 12px;
 }
@@ -82,7 +71,6 @@
     flex: 1;
 }
 
-/* ── Settings-page helpers (manager-only) ──────────────────── */
 .manager-view-toggle {
     display: inline-flex;
     border: 1px solid var(--ysc-border);
