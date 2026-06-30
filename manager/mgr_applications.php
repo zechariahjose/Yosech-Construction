@@ -31,7 +31,21 @@ if (isset($_POST['action'], $_POST['application_id'])) {
                 $projectId = (int) mysqli_insert_id($conn);
 
                 if ($projectId > 0) {
-                    $updateMsg = mysqli_real_escape_string($conn, 'Project approved and assigned to field operations.');
+                    $title    = mysqli_real_escape_string($conn, $appRow['ProjectTitle'] ?? 'Untitled Project');
+                    $location = mysqli_real_escape_string($conn, $appRow['ProjectLocation'] ?? '');
+                    $budget   = $appRow['ProposalBudget'] !== null
+                                ? '₱' . number_format((float)$appRow['ProposalBudget'], 2)
+                                : 'Not specified';
+                    $start    = $appRow['ProjectStartDate'] ?: 'TBD';
+                    $end      = $appRow['ProjectEndDate']   ?: 'TBD';
+
+                    $updateMsg = "Your project \"{$title}\" has been approved and is now active."
+                               . ($location ? "\n\nLocation: {$location}" : '')
+                               . "\nTimeline: {$start} → {$end}"
+                               . "\nProposed Budget: {$budget}"
+                               . "\n\nOur project manager will post field updates here as work progresses.";
+                    $updateMsg = mysqli_real_escape_string($conn, $updateMsg);
+
                     mysqli_query($conn, "INSERT INTO Project_Update (ProjectID, EmployeeID, Status, Description, UpdateDate)
                                          VALUES ({$projectId}, {$employeeId}, 'Approved', '{$updateMsg}', CURDATE())");
                 }
