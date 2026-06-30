@@ -19,7 +19,7 @@
     position: relative;
     background:
         linear-gradient(to bottom, rgba(10,15,25,0.55) 0%, rgba(10,15,25,0.3) 40%, rgba(10,15,25,0.75) 100%),
-        url('https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=80') center/cover no-repeat;
+        url('../other/signup_login.jpg') center/cover no-repeat;
     display: flex;
     flex-direction: column;
     justify-content: space-between;

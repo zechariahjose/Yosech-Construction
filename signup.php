@@ -86,82 +86,312 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-include("includes/header.php");
-include("includes/navbar.php");
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up · Yosech Construction</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/theme.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/login.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/auth.css">
+    <style>
+        /* Signup-specific overrides for split layout */
+        .login-body { background: #fff; }
 
-<link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/auth.css">
+        .signup-panel-right {
+            flex: 0 0 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fafafa;
+            padding: 40px 32px;
+            overflow-y: auto;
+        }
 
-<div class="auth-page">
-    <div class="auth-layout">
-        <div class="auth-card auth-card-wide">
-            <div class="auth-logo">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            </div>
-            <h1 class="auth-title">Sign Up</h1>
-            <p class="auth-subtitle">Create your client account to submit applications and track project updates.</p>
+        .signup-form-wrap {
+            width: 100%;
+            max-width: 440px;
+            padding: 16px 0;
+        }
+
+        .signup-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #111;
+            letter-spacing: -0.03em;
+            margin-bottom: 10px;
+        }
+
+        .signup-subtitle {
+            font-size: 0.85rem;
+            color: #6b7280;
+            line-height: 1.6;
+            margin-bottom: 28px;
+        }
+
+        .signup-field {
+            margin-bottom: 18px;
+        }
+
+        .signup-field label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: #374151;
+            margin-bottom: 7px;
+            text-transform: uppercase;
+        }
+
+        .signup-field input {
+            width: 100%;
+            padding: 11px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.88rem;
+            background: #fff;
+            color: #111;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .signup-field input:focus {
+            outline: none;
+            border-color: #6b7f94;
+            box-shadow: 0 0 0 3px rgba(107,127,148,0.12);
+        }
+
+        .signup-field input::placeholder { color: #9ca3af; }
+
+        .signup-row {
+            display: grid;
+            grid-template-columns: 1fr 72px;
+            gap: 12px;
+        }
+
+        .signup-row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .signup-password-wrap {
+            position: relative;
+        }
+
+        .signup-password-wrap input {
+            width: 100%;
+            padding: 11px 44px 11px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.88rem;
+            background: #fff;
+            color: #111;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .signup-password-wrap input:focus {
+            outline: none;
+            border-color: #6b7f94;
+            box-shadow: 0 0 0 3px rgba(107,127,148,0.12);
+        }
+
+        .signup-eye {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #9ca3af;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+        }
+
+        .signup-eye:hover { color: #374151; }
+
+        .signup-submit {
+            width: 100%;
+            padding: 13px 20px;
+            background: #c2622a;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: background 0.2s, transform 0.15s;
+            margin-top: 4px;
+        }
+
+        .signup-submit:hover { background: #a8521f; }
+        .signup-submit:active { transform: scale(0.98); }
+
+        .signup-divider {
+            height: 1px;
+            background: #e5e7eb;
+            margin: 22px 0;
+        }
+
+        .signup-login-text {
+            font-size: 0.84rem;
+            color: #6b7280;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .signup-login-text a {
+            color: #c2622a;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .signup-login-text a:hover { text-decoration: underline; }
+
+        .signup-footer-note {
+            font-size: 0.72rem;
+            color: #9ca3af;
+            line-height: 1.6;
+            text-align: center;
+        }
+
+        .signup-alert {
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 0.84rem;
+            margin-bottom: 20px;
+        }
+        .signup-alert-error   { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+        .signup-alert-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+
+        .signup-label-opt {
+            font-size: 0.68rem;
+            font-weight: 400;
+            color: #9ca3af;
+            text-transform: none;
+            letter-spacing: 0;
+            margin-left: 4px;
+        }
+
+        /* reuse password requirements from auth.css */
+        .password-requirements {
+            list-style: none;
+            margin: 0 0 18px;
+            padding: 11px 14px;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            color: #64748b;
+        }
+        .password-requirements li {
+            position: relative;
+            padding-left: 18px;
+            margin-bottom: 4px;
+        }
+        .password-requirements li:last-child { margin-bottom: 0; }
+        .password-requirements li::before { content: '○'; position: absolute; left: 0; color: #cbd5e1; }
+        .password-requirements li.met { color: #059669; }
+        .password-requirements li.met::before { content: '●'; color: #059669; }
+
+        @media (max-width: 768px) {
+            .login-panel-left { display: none; }
+            .signup-panel-right { flex: 1; padding: 40px 24px; }
+            .signup-row-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body class="login-body">
+
+<div class="login-split">
+
+    <!-- LEFT PANEL — same image + branding as login -->
+    <div class="login-panel-left">
+        <div class="login-panel-brand">
+            <span class="login-brand-mark">Y</span>
+            <span class="login-brand-name">Yosech Construction</span>
+        </div>
+        <div class="login-panel-overlay"></div>
+        <div class="login-panel-quote">
+            <p>"Join us and be part of building the future — one structure, one project, one milestone at a time."</p>
+            <div class="login-panel-quote-line"></div>
+        </div>
+    </div>
+
+    <!-- RIGHT PANEL — signup form -->
+    <div class="signup-panel-right">
+
+        <div class="signup-form-wrap">
+            <h1 class="signup-title">Create Account</h1>
+            <p class="signup-subtitle">Sign up to submit project applications and track construction updates.</p>
 
             <?php if ($error): ?>
-                <div class="auth-alert auth-alert-error"><?= htmlspecialchars($error) ?></div>
+                <div class="signup-alert signup-alert-error"><?= htmlspecialchars($error) ?></div>
             <?php endif; ?>
 
             <form method="post" action="<?= BASE_URL ?>/signup.php">
                 <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirect) ?>">
 
-                <div class="auth-row">
-                    <div class="auth-field">
+                <!-- Name row -->
+                <div class="signup-row">
+                    <div class="signup-field">
                         <label for="first_name">First Name</label>
-                        <div class="auth-input-wrap">
-                            <input type="text" id="first_name" name="first_name" required value="<?= htmlspecialchars($form['first_name']) ?>">
-                        </div>
+                        <input type="text" id="first_name" name="first_name" placeholder="Juan" required value="<?= htmlspecialchars($form['first_name']) ?>">
                     </div>
-                    <div class="auth-field">
+                    <div class="signup-field">
                         <label for="mi">M.I.</label>
-                        <div class="auth-input-wrap">
-                            <input type="text" id="mi" name="mi" maxlength="1" value="<?= htmlspecialchars($form['mi']) ?>">
-                        </div>
+                        <input type="text" id="mi" name="mi" maxlength="1" placeholder="A" value="<?= htmlspecialchars($form['mi']) ?>">
                     </div>
                 </div>
 
-                <div class="auth-field">
+                <div class="signup-field">
                     <label for="last_name">Last Name</label>
-                    <div class="auth-input-wrap">
-                        <input type="text" id="last_name" name="last_name" required value="<?= htmlspecialchars($form['last_name']) ?>">
-                    </div>
+                    <input type="text" id="last_name" name="last_name" placeholder="dela Cruz" required value="<?= htmlspecialchars($form['last_name']) ?>">
                 </div>
 
-                <div class="auth-field">
+                <div class="signup-field">
                     <label for="username">Username</label>
-                    <div class="auth-input-wrap">
-                        <input type="text" id="username" name="username" required autocomplete="username" value="<?= htmlspecialchars($form['username']) ?>">
-                    </div>
+                    <input type="text" id="username" name="username" placeholder="juandelacruz" required autocomplete="username" value="<?= htmlspecialchars($form['username']) ?>">
                 </div>
 
-                <div class="auth-field">
-                    <label for="email">Email</label>
-                    <div class="auth-input-wrap">
-                        <input type="email" id="email" name="email" required autocomplete="email" value="<?= htmlspecialchars($form['email']) ?>">
-                    </div>
+                <div class="signup-field">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" placeholder="juan@email.com" required autocomplete="email" value="<?= htmlspecialchars($form['email']) ?>">
                 </div>
 
-                <div class="auth-field">
-                    <label for="contact">Contact Number <span style="font-weight:400;color:var(--ysc-muted-light)">(optional)</span></label>
-                    <div class="auth-input-wrap">
-                        <input type="tel" id="contact" name="contact" value="<?= htmlspecialchars($form['contact']) ?>">
-                    </div>
+                <div class="signup-field">
+                    <label for="contact">Contact Number <span class="signup-label-opt">(optional)</span></label>
+                    <input type="tel" id="contact" name="contact" placeholder="+63 9XX XXX XXXX" value="<?= htmlspecialchars($form['contact']) ?>">
                 </div>
 
-                <div class="auth-row-2">
-                    <div class="auth-field">
+                <!-- Password row -->
+                <div class="signup-row-2">
+                    <div class="signup-field">
                         <label for="password">Password</label>
-                        <div class="auth-input-wrap">
+                        <div class="signup-password-wrap">
                             <input type="password" id="password" name="password" required autocomplete="new-password" minlength="8">
+                            <button type="button" class="signup-eye" onclick="togglePassword('password','eyeIcon1')" aria-label="Toggle password">
+                                <svg id="eyeIcon1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
                         </div>
                     </div>
-                    <div class="auth-field">
+                    <div class="signup-field">
                         <label for="confirm_password">Confirm Password</label>
-                        <div class="auth-input-wrap">
+                        <div class="signup-password-wrap">
                             <input type="password" id="confirm_password" name="confirm_password" required autocomplete="new-password" minlength="8">
+                            <button type="button" class="signup-eye" onclick="togglePassword('confirm_password','eyeIcon2')" aria-label="Toggle confirm password">
+                                <svg id="eyeIcon2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -174,32 +404,48 @@ include("includes/navbar.php");
                     <li data-rule="special">One special character (!@#$%…)</li>
                 </ul>
 
-                <button type="submit" class="auth-submit">
-                    Create Account
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                <button type="submit" name="submit" class="signup-submit">
+                    CREATE ACCOUNT
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </button>
             </form>
 
-            <p class="auth-switch">Already have an account? <a href="<?= BASE_URL ?>/login.php<?= $redirect !== 'index.php' ? '?redirect=' . urlencode($redirect) : '' ?>">Sign in</a></p>
+            <div class="signup-divider"></div>
+
+            <p class="signup-login-text">Already have an account? <a href="<?= BASE_URL ?>/login.php<?= $redirect !== 'index.php' ? '?redirect=' . urlencode($redirect) : '' ?>">Sign in</a></p>
+
+            <div class="signup-footer-note">
+                © 2024 Yosech Construction &amp; Civil Engineering. Licensed in Zamboanga del Norte.
+                By signing up, you agree to our terms and privacy policy.
+            </div>
         </div>
 
-        <div class="auth-deco" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 3l18 18M3 21L21 3"/></svg>
-        </div>
     </div>
 </div>
 
 <script>
+function togglePassword(inputId, iconId) {
+    var input = document.getElementById(inputId);
+    var icon  = document.getElementById(iconId);
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>';
+    } else {
+        input.type = 'password';
+        icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    }
+}
+
 (function () {
     var passwordInput = document.getElementById('password');
-    var requirements = document.getElementById('passwordRequirements');
+    var requirements  = document.getElementById('passwordRequirements');
     if (!passwordInput || !requirements) return;
 
     var rules = {
-        length: function (v) { return v.length >= 8; },
-        upper: function (v) { return /[A-Z]/.test(v); },
-        lower: function (v) { return /[a-z]/.test(v); },
-        number: function (v) { return /[0-9]/.test(v); },
+        length:  function (v) { return v.length >= 8; },
+        upper:   function (v) { return /[A-Z]/.test(v); },
+        lower:   function (v) { return /[a-z]/.test(v); },
+        number:  function (v) { return /[0-9]/.test(v); },
         special: function (v) { return /[^A-Za-z0-9]/.test(v); }
     };
 
@@ -207,7 +453,7 @@ include("includes/navbar.php");
         var value = passwordInput.value;
         requirements.querySelectorAll('li').forEach(function (item) {
             var rule = item.dataset.rule;
-            var met = rules[rule] && rules[rule](value);
+            var met  = rules[rule] && rules[rule](value);
             item.classList.toggle('met', met);
         });
     }
@@ -216,5 +462,5 @@ include("includes/navbar.php");
     updateRequirements();
 })();
 </script>
-
-<?php include("includes/footer.php"); ?>
+</body>
+</html>
