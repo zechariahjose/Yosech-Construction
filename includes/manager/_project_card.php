@@ -10,6 +10,13 @@ $paymentBadge = match($project['ProjectPaymentStatus']) {
     'Partial' => 'pj-pay-partial',
     default   => 'pj-pay-unpaid',
 };
+
+// Check if project has already been marked as started
+$alreadyStarted = (bool) mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT UpdateID FROM Project_Update
+     WHERE ProjectID = {$pId} AND Description LIKE '%marked as started%'
+     LIMIT 1"
+));
 ?>
 <div class="pj-item" id="pjItem_<?= $pId ?>">
 
@@ -154,18 +161,27 @@ $paymentBadge = match($project['ProjectPaymentStatus']) {
                 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
                     <div>
                         <div class="pj-detail-label" style="margin-bottom:4px;">Site Started?</div>
-                        <div style="font-size:0.78rem;color:var(--admin-muted);">Posts a status update visible to the client.</div>
+                        <?php if ($alreadyStarted): ?>
+                            <div style="font-size:0.78rem;color:#059669;font-weight:600;display:flex;align-items:center;gap:5px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                                This project has been marked as started.
+                            </div>
+                        <?php else: ?>
+                            <div style="font-size:0.78rem;color:var(--admin-muted);">Posts a status update visible to the client.</div>
+                        <?php endif; ?>
                     </div>
                     <div style="display:flex;gap:8px;">
                         <form method="post">
                             <input type="hidden" name="project_id" value="<?= $pId ?>">
                             <input type="hidden" name="site_started" value="1">
                             <button type="submit" name="mark_site_status"
-                                    class="admin-btn admin-btn-primary admin-btn-sm">
+                                    class="admin-btn admin-btn-primary admin-btn-sm"
+                                    <?= $alreadyStarted ? 'disabled title="Already marked as started"' : '' ?>>
                                 ✓ Mark as Started
                             </button>
                         </form>
-                        <form method="post">
+                        <form method="post"
+                              onsubmit="return confirm('Warning: Marking this project as Not Yet Started will post an update to the client. Are you sure?');">
                             <input type="hidden" name="project_id" value="<?= $pId ?>">
                             <input type="hidden" name="site_started" value="0">
                             <button type="submit" name="mark_site_status"
