@@ -49,11 +49,7 @@ $totalOngoing   = count(array_filter($projects, fn($p) => $p['Status'] === 'Ongo
             <span class="pj-stat-num"><?= $totalOngoing ?></span>
             <span class="pj-stat-label">Ongoing</span>
         </div>
-        <div class="pj-stat-divider"></div>
-        <div class="pj-stat">
-            <span class="pj-stat-num">100%</span>
-            <span class="pj-stat-label">Zamboanga del Norte</span>
-        </div>
+
     </div>
 </div>
 
