@@ -376,7 +376,7 @@ include("../includes/manager/layout_start.php");
 /* Row */
 .pj-row {
     display: grid;
-    grid-template-columns: 260px 1fr auto;
+    grid-template-columns: minmax(180px, 280px) 1fr auto;
     align-items: center;
     gap: 20px;
     padding: 16px 20px;
@@ -398,7 +398,7 @@ include("../includes/manager/layout_start.php");
     margin-bottom: 5px;
 }
 .pj-source-web { color: #ea6c0a; background: rgba(249,115,22,.1); }
-.pj-title { font-size: 0.9rem; font-weight: 700; color: var(--admin-text); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pj-title { font-size: 0.9rem; font-weight: 700; color: var(--admin-text); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: normal; word-break: break-word; }
 .pj-subtitle { font-size: 0.74rem; color: var(--admin-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pj-dot { margin: 0 4px; }
 .pj-thumb { width: 48px; height: 38px; object-fit: cover; border-radius: 5px; flex-shrink: 0; border: 1px solid var(--admin-border); }
