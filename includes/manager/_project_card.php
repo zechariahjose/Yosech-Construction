@@ -1,12 +1,25 @@
+<?php
+// $project = internal Project row; $status = managerProjectStatusLabel(); $updatesResult = query result
+$pEditId = 'editProject_' . (int) $project['ProjectID'];
+?>
 <div class="admin-card">
+
+    <!-- Header -->
     <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
         <div>
             <h3 class="admin-card-title mb-1"><?= htmlspecialchars(adminProjectDisplayName($project)) ?></h3>
             <span class="admin-table-sub">Site #<?= (int) $project['ProjectID'] ?> · <?= htmlspecialchars($project['ProjectLocation'] ?? '—') ?></span>
         </div>
-        <span class="admin-badge <?= $status['class'] ?>"><?= htmlspecialchars($status['label']) ?></span>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+            <span class="admin-badge <?= $status['class'] ?>"><?= htmlspecialchars($status['label']) ?></span>
+            <button type="button" class="admin-btn admin-btn-outline admin-btn-sm"
+                    onclick="document.getElementById('<?= $pEditId ?>').style.display='flex'">
+                Edit
+            </button>
+        </div>
     </div>
 
+    <!-- Meta -->
     <div class="admin-meta-grid">
         <div class="admin-meta-item"><span>Client</span><?= htmlspecialchars($project['Client_FirstName'] . ' ' . $project['Client_LastName']) ?></div>
         <div class="admin-meta-item"><span>Contact</span><?= htmlspecialchars($project['Client_ContactNumber'] ?: '—') ?></div>
@@ -19,7 +32,7 @@
         <div class="small text-muted" style="line-height:1.6;"><?= nl2br(htmlspecialchars($project['Description'] ?? '—')) ?></div>
     </div>
 
-    <!-- Update Status -->
+    <!-- Quick status update -->
     <form method="post" class="d-flex gap-2 align-items-end mb-0 js-track-form">
         <input type="hidden" name="project_id" value="<?= (int) $project['ProjectID'] ?>">
         <div class="admin-field mb-0 flex-grow-1">
@@ -81,9 +94,82 @@
 
     <hr class="admin-divider">
 
-    <!-- Delete Project -->
-    <form method="post" onsubmit="return confirm('Are you sure you want to delete Project #<?= (int) $project['ProjectID'] ?>? This cannot be undone. The linked application will not be affected.');">
+    <!-- Delete -->
+    <form method="post" onsubmit="return confirm('Are you sure you want to delete Project #<?= (int) $project['ProjectID'] ?>? This cannot be undone.');">
         <input type="hidden" name="project_id" value="<?= (int) $project['ProjectID'] ?>">
         <button type="submit" name="delete_project" class="admin-btn admin-btn-danger admin-btn-sm w-100">Delete Project</button>
     </form>
+</div>
+
+<!-- ── Edit Modal ─────────────────────────────────────────── -->
+<div id="<?= $pEditId ?>"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:2000;align-items:center;justify-content:center;"
+     onclick="if(event.target===this)this.style.display='none'">
+    <div style="background:#fff;border-radius:10px;padding:32px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;position:relative;">
+        <button type="button"
+                onclick="document.getElementById('<?= $pEditId ?>').style.display='none'"
+                style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:#6b7280;">✕</button>
+
+        <h2 class="admin-page-title" style="font-size:1.05rem;margin-bottom:4px;">Edit Project</h2>
+        <p class="admin-page-sub" style="margin-bottom:20px;">Site #<?= (int) $project['ProjectID'] ?> — update project details below.</p>
+
+        <form method="POST" class="js-edit-modal-form">
+            <input type="hidden" name="project_id" value="<?= (int) $project['ProjectID'] ?>">
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="admin-field">
+                    <label>Project Title</label>
+                    <input type="text" name="edit_title"
+                           value="<?= htmlspecialchars($project['ProjectTitle'] ?? '') ?>"
+                           data-original="<?= htmlspecialchars($project['ProjectTitle'] ?? '') ?>">
+                </div>
+                <div class="admin-field">
+                    <label>Location</label>
+                    <input type="text" name="edit_location"
+                           value="<?= htmlspecialchars($project['ProjectLocation'] ?? '') ?>"
+                           data-original="<?= htmlspecialchars($project['ProjectLocation'] ?? '') ?>">
+                </div>
+                <div class="admin-field">
+                    <label>Start Date</label>
+                    <input type="date" name="edit_start_date"
+                           value="<?= htmlspecialchars($project['StartDate'] ?? '') ?>"
+                           data-original="<?= htmlspecialchars($project['StartDate'] ?? '') ?>">
+                </div>
+                <div class="admin-field">
+                    <label>End Date</label>
+                    <input type="date" name="edit_end_date"
+                           value="<?= htmlspecialchars($project['EndDate'] ?? '') ?>"
+                           data-original="<?= htmlspecialchars($project['EndDate'] ?? '') ?>">
+                </div>
+                <div class="admin-field">
+                    <label>Project Status</label>
+                    <select name="edit_project_status" data-original="<?= htmlspecialchars($project['ProjectStatus']) ?>">
+                        <?php foreach (['Ongoing', 'On Hold', 'Completed', 'Cancelled'] as $s): ?>
+                            <option value="<?= $s ?>" <?= $project['ProjectStatus'] === $s ? 'selected' : '' ?>><?= $s ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="admin-field">
+                    <label>Payment Status</label>
+                    <select name="edit_payment_status" data-original="<?= htmlspecialchars($project['ProjectPaymentStatus']) ?>">
+                        <?php foreach (['Unpaid', 'Partial', 'Paid'] as $ps): ?>
+                            <option value="<?= $ps ?>" <?= $project['ProjectPaymentStatus'] === $ps ? 'selected' : '' ?>><?= $ps ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <div class="admin-field">
+                <label>Description / Scope of Work</label>
+                <textarea name="edit_description" rows="4"
+                          data-original="<?= htmlspecialchars($project['Description'] ?? '') ?>"><?= htmlspecialchars($project['Description'] ?? '') ?></textarea>
+            </div>
+
+            <div class="d-flex gap-2 justify-content-end mt-2">
+                <button type="button" class="admin-btn admin-btn-outline"
+                        onclick="document.getElementById('<?= $pEditId ?>').style.display='none'">Cancel</button>
+                <button type="submit" name="edit_project" class="admin-btn admin-btn-primary" disabled>Save Changes</button>
+            </div>
+        </form>
+    </div>
 </div>

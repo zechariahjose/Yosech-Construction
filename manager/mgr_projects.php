@@ -11,7 +11,27 @@ $employeeId        = (int) $_SESSION['user_id'];
 $successMsg = '';
 $errorMsg   = '';
 
-// ── UPDATE SHOWCASE STATUS ──────────────────────────────────
+// ── EDIT SHOWCASE PROJECT ───────────────────────────────────
+if (isset($_POST['edit_showcase'], $_POST['showcase_id'])) {
+    $scID    = (int) $_POST['showcase_id'];
+    $scTitle = mysqli_real_escape_string($conn, trim($_POST['showcase_title']));
+    $scSum   = mysqli_real_escape_string($conn, trim($_POST['showcase_summary']));
+    $scStat  = mysqli_real_escape_string($conn, $_POST['showcase_status']);
+    $scStart = !empty($_POST['showcase_start_date'])
+                   ? "'" . mysqli_real_escape_string($conn, $_POST['showcase_start_date']) . "'"
+                   : 'NULL';
+    $scEnd   = !empty($_POST['showcase_end_date'])
+                   ? "'" . mysqli_real_escape_string($conn, $_POST['showcase_end_date']) . "'"
+                   : 'NULL';
+    if ($scTitle !== '') {
+        mysqli_query($conn, "UPDATE ProjectShowcase SET Title='{$scTitle}', Summary='{$scSum}', Status='{$scStat}', StartDate={$scStart}, EndDate={$scEnd} WHERE ProjectShowcaseID={$scID}");
+        $successMsg = "Website project updated.";
+    } else {
+        $errorMsg = "Title cannot be empty.";
+    }
+}
+
+// ── UPDATE SHOWCASE STATUS (quick inline) ──────────────────
 if (isset($_POST['update_showcase'], $_POST['showcase_id'])) {
     $scID     = (int) $_POST['showcase_id'];
     $scStatus = mysqli_real_escape_string($conn, $_POST['showcase_status']);
@@ -19,6 +39,28 @@ if (isset($_POST['update_showcase'], $_POST['showcase_id'])) {
                     ? "'" . mysqli_real_escape_string($conn, $_POST['showcase_end_date']) . "'"
                     : 'NULL';
     mysqli_query($conn, "UPDATE ProjectShowcase SET Status='{$scStatus}', EndDate={$scEnd} WHERE ProjectShowcaseID={$scID}");
+    $successMsg = "Website project status updated.";
+}
+
+// ── EDIT INTERNAL PROJECT ───────────────────────────────────
+if (isset($_POST['edit_project'], $_POST['project_id'])) {
+    $epID          = (int) $_POST['project_id'];
+    $epTitle       = mysqli_real_escape_string($conn, trim($_POST['edit_title']));
+    $epLocation    = mysqli_real_escape_string($conn, trim($_POST['edit_location']));
+    $epDesc        = mysqli_real_escape_string($conn, trim($_POST['edit_description']));
+    $epStatus      = mysqli_real_escape_string($conn, $_POST['edit_project_status']);
+    $epPayment     = mysqli_real_escape_string($conn, $_POST['edit_payment_status']);
+    $epStart       = !empty($_POST['edit_start_date'])
+                         ? "'" . mysqli_real_escape_string($conn, $_POST['edit_start_date']) . "'"
+                         : 'NULL';
+    $epEnd         = !empty($_POST['edit_end_date'])
+                         ? "'" . mysqli_real_escape_string($conn, $_POST['edit_end_date']) . "'"
+                         : 'NULL';
+    // Update Project table
+    mysqli_query($conn, "UPDATE Project SET ProjectStatus='{$epStatus}', StartDate={$epStart}, EndDate={$epEnd}, Description='{$epDesc}', ProjectPaymentStatus='{$epPayment}' WHERE ProjectID={$epID}");
+    // Update the linked Application's ProjectTitle and ProjectLocation
+    mysqli_query($conn, "UPDATE Application a JOIN Project p ON p.ApplicationID=a.ApplicationID SET a.ProjectTitle='{$epTitle}', a.ProjectLocation='{$epLocation}' WHERE p.ProjectID={$epID}");
+    $successMsg = "Project updated successfully.";
 }
 
 // ── DELETE PROJECT ──────────────────────────────────────────
@@ -64,7 +106,7 @@ if (isset($_POST['add_project'])) {
 }
 
 // ── UPDATE PROJECT STATUS ───────────────────────────────────
-if (isset($_POST['project_id'], $_POST['project_status']) && !isset($_POST['add_project'], $_POST['delete_project'])) {
+if (isset($_POST['project_id'], $_POST['project_status']) && !isset($_POST['add_project'], $_POST['delete_project'], $_POST['edit_project'])) {
     $projectId     = (int) $_POST['project_id'];
     $projectStatus = mysqli_real_escape_string($conn, $_POST['project_status']);
     mysqli_query($conn, "UPDATE Project SET ProjectStatus='{$projectStatus}' WHERE ProjectID={$projectId}");
@@ -327,9 +369,8 @@ include("../includes/manager/layout_start.php");
 
 <script>
 (function () {
-    // ── Track-form: select / date inputs ─────────────────────
-    // Activates the submit button only when any tracked field differs from its original value.
-    document.querySelectorAll('.js-track-form').forEach(function (form) {
+    // ── Shared: activate submit btn when any [data-original] field changes ──
+    function bindTrackForm(form) {
         var btn     = form.querySelector('button[type="submit"], button:not([type="button"])');
         var tracked = form.querySelectorAll('[data-original]');
         if (!btn || !tracked.length) return;
@@ -345,12 +386,16 @@ include("../includes/manager/layout_start.php");
             el.addEventListener('change', check);
             el.addEventListener('input',  check);
         });
+        check();
+    }
 
-        check(); // initialise
-    });
+    // ── Quick-status / quick-save forms ──────────────────────
+    document.querySelectorAll('.js-track-form').forEach(bindTrackForm);
 
-    // ── Post-update forms: textarea ───────────────────────────
-    // Activates the submit button only when the textarea has non-empty text.
+    // ── Edit modal forms ─────────────────────────────────────
+    document.querySelectorAll('.js-edit-modal-form').forEach(bindTrackForm);
+
+    // ── Post-update textarea forms ───────────────────────────
     document.querySelectorAll('.js-post-update-form').forEach(function (form) {
         var btn      = form.querySelector('button[type="submit"], button:not([type="button"])');
         var textarea = form.querySelector('textarea');
@@ -359,9 +404,8 @@ include("../includes/manager/layout_start.php");
         function check() {
             btn.disabled = textarea.value.trim() === '';
         }
-
         textarea.addEventListener('input', check);
-        check(); // initialise
+        check();
     });
 })();
 </script>
