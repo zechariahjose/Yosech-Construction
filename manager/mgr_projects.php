@@ -18,6 +18,10 @@ if (isset($_POST['publish_to_website'], $_POST['project_id'])) {
     $pubSummary = trim(mysqli_real_escape_string($conn, $_POST['pub_summary']));
     $pubStatus  = mysqli_real_escape_string($conn, $_POST['pub_status']);
 
+    // Absolute path for file upload (script lives in manager/, assets/ is one level up)
+    $uploadDir = dirname(__DIR__) . '/assets/projects/';
+    $uploadUrl = 'assets/projects/'; // stored in DB as relative path from site root
+
     // Fetch project details for client update
     $projRow = mysqli_fetch_assoc(mysqli_query($conn,
         "SELECT p.StartDate, p.EndDate, a.ProjectTitle, a.ProjectLocation, a.UserID
@@ -26,24 +30,37 @@ if (isset($_POST['publish_to_website'], $_POST['project_id'])) {
          WHERE p.ProjectID = {$pubId} LIMIT 1"
     ));
 
+    // Check if PM has marked it as started
+    $startedCheck = mysqli_fetch_assoc(mysqli_query($conn,
+        "SELECT UpdateID FROM Project_Update
+         WHERE ProjectID = {$pubId} AND Description LIKE '%marked as started%'
+         LIMIT 1"
+    ));
+
     if ($pubTitle === '') {
         $errorMsg = "Title is required to publish.";
+    } elseif (!$startedCheck) {
+        $errorMsg = "You must mark this project as started before publishing it to the website.";
     } elseif (empty($_FILES['pub_photo']['name'])) {
         $errorMsg = "A photo is required to publish the project to the website.";
     } else {
-        // Handle photo upload
-        $uploadDir = "assets/projects/";
         $ext = strtolower(pathinfo($_FILES['pub_photo']['name'], PATHINFO_EXTENSION));
         if (!in_array($ext, ['jpg','jpeg','png','webp'])) {
             $errorMsg = "Invalid image format. Use JPG, PNG, or WEBP.";
         } else {
-            $filename = 'proj_' . $pubId . '_' . time() . '.' . $ext;
-            $dest     = $uploadDir . $filename;
+            // Ensure directory exists
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
 
-            if (!move_uploaded_file($_FILES['pub_photo']['tmp_name'], $dest)) {
-                $errorMsg = "Failed to upload image.";
+            $filename = 'proj_' . $pubId . '_' . time() . '.' . $ext;
+            $destAbs  = $uploadDir . $filename;          // absolute — for move_uploaded_file
+            $destRel  = $uploadUrl . $filename;          // relative — stored in DB / used by website
+
+            if (!move_uploaded_file($_FILES['pub_photo']['tmp_name'], $destAbs)) {
+                $errorMsg = "Failed to upload image. Please try again.";
             } else {
-                $escImg   = mysqli_real_escape_string($conn, $dest);
+                $escImg   = mysqli_real_escape_string($conn, $destRel);
                 $startVal = !empty($projRow['StartDate'])
                     ? "'" . mysqli_real_escape_string($conn, $projRow['StartDate']) . "'"
                     : 'NULL';
@@ -57,7 +74,6 @@ if (isset($_POST['publish_to_website'], $_POST['project_id'])) {
                 ));
 
                 if ($exists) {
-                    // Update existing
                     $scID = (int) $exists['ProjectShowcaseID'];
                     mysqli_query($conn,
                         "UPDATE ProjectShowcase SET Summary='{$pubSummary}', Status='{$pubStatus}',
@@ -66,18 +82,17 @@ if (isset($_POST['publish_to_website'], $_POST['project_id'])) {
                     );
                     $successMsg = "Website showcase updated.";
                 } else {
-                    // Insert new
                     mysqli_query($conn,
                         "INSERT INTO ProjectShowcase (Title, Summary, StartDate, EndDate, Status, ImageURL)
                          VALUES ('{$pubTitle}', '{$pubSummary}', {$startVal}, {$endVal}, '{$pubStatus}', '{$escImg}')"
                     );
-                    $successMsg = "Project published to website.";
+                    $successMsg = "Project published to website successfully.";
                 }
 
                 // Post client-visible update
                 $siteStatus = $pubStatus === 'Ongoing' ? 'has started' : 'has been added to the website';
                 $clientMsg  = "Project \"{$pubTitle}\" {$siteStatus}"
-                            . ($projRow['ProjectLocation'] ? " at {$projRow['ProjectLocation']}" : "")
+                            . (!empty($projRow['ProjectLocation']) ? " at {$projRow['ProjectLocation']}" : "")
                             . ". You can now view it on our projects page.";
                 $clientMsg  = mysqli_real_escape_string($conn, $clientMsg);
                 mysqli_query($conn,
