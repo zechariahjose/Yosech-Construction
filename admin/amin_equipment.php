@@ -37,9 +37,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 $adminActiveNav = 'equipment';
 $adminPageTitle = 'Equipment Fleet';
 $adminPageSubtitle = 'Enterprise fleet management — total units, maintenance status, and global site allocation.';
-$adminPageActions = '
-    <a href="' . BASE_URL . '/equipment.php" class="admin-btn admin-btn-outline" target="_blank" rel="noopener">Public Fleet Page</a>
-';
+$adminPageActions = '';
 
 include("../includes/admin/layout_start.php");
 ?>
