@@ -215,7 +215,7 @@ include("../includes/manager/layout_start.php");
 <?php if (count($activeRows) === 0): ?>
     <div class="admin-alert admin-alert-info" style="margin-bottom:32px;">No ongoing projects at the moment.</div>
 <?php else: ?>
-    <div class="admin-card-grid" style="margin-bottom:40px;">
+    <div class="pj-list-stack" style="margin-bottom:40px;">
         <?php foreach ($activeRows as $project): ?>
             <?php if ($project['_source'] === 'showcase'): ?>
                 <?php include __DIR__ . '/../includes/manager/_showcase_card.php'; ?>
@@ -248,7 +248,7 @@ include("../includes/manager/layout_start.php");
 <?php if (count($allRows) === 0): ?>
     <div class="admin-alert admin-alert-info">No projects found. Use the <strong>+ Add Project</strong> button to create one from an approved application.</div>
 <?php else: ?>
-    <div class="admin-card-grid">
+    <div class="pj-list-stack">
         <?php foreach ($allRows as $project): ?>
             <?php if ($project['_source'] === 'showcase'): ?>
                 <?php include __DIR__ . '/../includes/manager/_showcase_card.php'; ?>
@@ -360,50 +360,190 @@ include("../includes/manager/layout_start.php");
 </div>
 
 <style>
+/* ── List / Stack layout ─────────────────────────────────── */
+.pj-list-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius, 8px);
+    overflow: hidden;
+    background: var(--admin-surface, #fff);
+}
+
+.pj-list-item {
+    border-bottom: 1px solid var(--admin-border);
+}
+.pj-list-item:last-child { border-bottom: none; }
+
+.pj-list-row {
+    display: grid;
+    grid-template-columns: 280px 1fr auto;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 20px;
+    transition: background 0.15s;
+}
+.pj-list-row:hover { background: var(--ysc-bg, #f8f9fa); }
+
+/* Identity column */
+.pj-list-identity { min-width: 0; }
+
+.pj-list-source-tag {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ysc-primary);
+    background: var(--ysc-primary-light, #eef2f6);
+    padding: 2px 7px;
+    border-radius: 3px;
+    margin-bottom: 4px;
+}
+
+.pj-list-source-web {
+    color: #f97316;
+    background: rgba(249,115,22,.1);
+}
+
+.pj-list-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--admin-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pj-list-sub {
+    font-size: 0.74rem;
+    color: var(--admin-muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Meta column */
+.pj-list-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 4px 16px;
+}
+
+.pj-list-meta-item {
+    font-size: 0.8rem;
+    color: var(--admin-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pj-list-meta-item span {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--admin-muted);
+    margin-bottom: 1px;
+}
+
+/* Actions column */
+.pj-list-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* Detail panel */
+.pj-list-detail {
+    border-top: 1px solid var(--ysc-border-light, #f3f4f6);
+    padding: 20px;
+    background: var(--ysc-bg, #f8f9fa);
+}
+
+.pj-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.pj-detail-section {
+    margin-bottom: 16px;
+}
+.pj-detail-section:last-child { margin-bottom: 0; }
+
+.pj-detail-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--admin-muted);
+    margin-bottom: 8px;
+}
+
+.pj-detail-text {
+    font-size: 0.84rem;
+    color: var(--admin-text);
+    line-height: 1.6;
+}
+
+/* Disabled buttons */
 .admin-btn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
     pointer-events: none;
 }
+
+@media (max-width: 900px) {
+    .pj-list-row { grid-template-columns: 1fr auto; }
+    .pj-list-meta { display: none; }
+    .pj-detail-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+    .pj-list-actions { flex-direction: column; align-items: flex-end; }
+}
 </style>
 
 <script>
+function toggleDetail(id, btn) {
+    var panel = document.getElementById(id);
+    if (!panel) return;
+    var isOpen = panel.style.display !== 'none';
+    panel.style.display = isOpen ? 'none' : 'block';
+    btn.textContent = isOpen ? 'Details' : 'Close';
+}
+
 (function () {
-    // ── Shared: activate submit btn when any [data-original] field changes ──
     function bindTrackForm(form) {
-        var btn     = form.querySelector('button[type="submit"], button:not([type="button"])');
+        var btn     = form.querySelector('button[type="submit"]');
         var tracked = form.querySelectorAll('[data-original]');
         if (!btn || !tracked.length) return;
-
         function check() {
-            var changed = Array.from(tracked).some(function (el) {
+            btn.disabled = !Array.from(tracked).some(function(el) {
                 return el.value !== el.dataset.original;
             });
-            btn.disabled = !changed;
         }
-
-        tracked.forEach(function (el) {
+        tracked.forEach(function(el) {
             el.addEventListener('change', check);
             el.addEventListener('input',  check);
         });
         check();
     }
 
-    // ── Quick-status / quick-save forms ──────────────────────
     document.querySelectorAll('.js-track-form').forEach(bindTrackForm);
-
-    // ── Edit modal forms ─────────────────────────────────────
     document.querySelectorAll('.js-edit-modal-form').forEach(bindTrackForm);
 
-    // ── Post-update textarea forms ───────────────────────────
-    document.querySelectorAll('.js-post-update-form').forEach(function (form) {
-        var btn      = form.querySelector('button[type="submit"], button:not([type="button"])');
+    document.querySelectorAll('.js-post-update-form').forEach(function(form) {
+        var btn      = form.querySelector('button[type="submit"]');
         var textarea = form.querySelector('textarea');
         if (!btn || !textarea) return;
-
-        function check() {
-            btn.disabled = textarea.value.trim() === '';
-        }
+        function check() { btn.disabled = textarea.value.trim() === ''; }
         textarea.addEventListener('input', check);
         check();
     });
