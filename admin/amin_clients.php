@@ -4,8 +4,21 @@ include("../includes/admin/helpers.php");
 
 adminRequireLogin('admin/amin_clients.php');
 
-$adminEmployee = adminCurrentEmployee($conn);
+$adminEmployee     = adminCurrentEmployee($conn);
 $adminPendingCount = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS total FROM Application WHERE Status = 'Pending'"))['total'];
+
+$success = '';
+$error   = '';
+
+// ── DELETE CLIENT ───────────────────────────────────────────
+if (isset($_POST['delete_client'], $_POST['client_id'])) {
+    $cid = (int) $_POST['client_id'];
+    $del = mysqli_prepare($conn, "DELETE FROM Client WHERE UserID = ?");
+    mysqli_stmt_bind_param($del, "i", $cid);
+    mysqli_stmt_execute($del)
+        ? $success = "Client account #$cid has been removed."
+        : $error   = "Failed to remove client account.";
+}
 
 $searchQuery = trim($_GET['q'] ?? '');
 $sql = "
@@ -45,6 +58,18 @@ $adminPageActions = '
 include("../includes/admin/layout_start.php");
 ?>
 
+<?php if ($success): ?>
+    <div class="admin-alert" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;margin-bottom:20px;display:flex;align-items:center;gap:8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+        <?= htmlspecialchars($success) ?>
+    </div>
+<?php endif; ?>
+<?php if ($error): ?>
+    <div class="admin-alert" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;margin-bottom:20px;">
+        <?= htmlspecialchars($error) ?>
+    </div>
+<?php endif; ?>
+
 <div class="admin-panel">
     <?php if (mysqli_num_rows($result) === 0): ?>
         <div class="admin-empty">
@@ -62,15 +87,16 @@ include("../includes/admin/layout_start.php");
                     <th>Applications</th>
                     <th>Approved</th>
                     <th>Approved Revenue</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
-                <?php while ($client = mysqli_fetch_assoc($result)): ?>
+                <?php while ($client = mysqli_fetch_assoc($result)):
+                    $fullName = trim($client['Client_FirstName'] . ' ' . ($client['Client_MI'] ? $client['Client_MI'] . '. ' : '') . $client['Client_LastName']);
+                ?>
                 <tr>
                     <td>
-                        <span class="admin-table-project">
-                            <?= htmlspecialchars(trim($client['Client_FirstName'] . ' ' . ($client['Client_MI'] ? $client['Client_MI'] . '. ' : '') . $client['Client_LastName'])) ?>
-                        </span>
+                        <span class="admin-table-project"><?= htmlspecialchars($fullName) ?></span>
                         <span class="admin-table-sub">ID #<?= (int) $client['UserID'] ?></span>
                     </td>
                     <td><?= htmlspecialchars($client['Client_Username']) ?></td>
@@ -79,6 +105,12 @@ include("../includes/admin/layout_start.php");
                     <td><?= (int) $client['application_count'] ?></td>
                     <td><?= (int) $client['approved_count'] ?></td>
                     <td>₱<?= number_format((float) $client['approved_revenue'], 0) ?></td>
+                    <td>
+                        <form method="POST" onsubmit="return confirm('Remove <?= htmlspecialchars(addslashes($fullName)) ?>? This will also delete all their applications and cannot be undone.');">
+                            <input type="hidden" name="client_id" value="<?= (int) $client['UserID'] ?>">
+                            <button type="submit" name="delete_client" class="admin-btn admin-btn-danger admin-btn-sm">Delete</button>
+                        </form>
+                    </td>
                 </tr>
                 <?php endwhile; ?>
             </tbody>
