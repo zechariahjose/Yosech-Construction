@@ -147,14 +147,110 @@ $paymentBadge = match($project['ProjectPaymentStatus']) {
             </div>
             <?php endif; ?>
 
-            <!-- Delete -->
-            <div class="pj-detail-footer">
-                <form method="post" onsubmit="return confirm('Delete Project #<?= $pId ?>? This cannot be undone.');">
-                    <input type="hidden" name="project_id" value="<?= $pId ?>">
-                    <button type="submit" name="delete_project" class="admin-btn admin-btn-danger admin-btn-sm">
-                        Delete Project
-                    </button>
-                </form>
+            <!-- Site status + publish -->
+            <div class="pj-detail-footer" style="flex-direction:column;align-items:stretch;gap:12px;">
+
+                <!-- Started / Not Started -->
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                    <div>
+                        <div class="pj-detail-label" style="margin-bottom:4px;">Site Started?</div>
+                        <div style="font-size:0.78rem;color:var(--admin-muted);">Posts a status update visible to the client.</div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <form method="post">
+                            <input type="hidden" name="project_id" value="<?= $pId ?>">
+                            <input type="hidden" name="site_started" value="1">
+                            <button type="submit" name="mark_site_status"
+                                    class="admin-btn admin-btn-primary admin-btn-sm">
+                                ✓ Mark as Started
+                            </button>
+                        </form>
+                        <form method="post">
+                            <input type="hidden" name="project_id" value="<?= $pId ?>">
+                            <input type="hidden" name="site_started" value="0">
+                            <button type="submit" name="mark_site_status"
+                                    class="admin-btn admin-btn-outline admin-btn-sm">
+                                ✗ Not Yet Started
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Publish to Website -->
+                <div style="border-top:1px solid var(--admin-border);padding-top:12px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+                        <div>
+                            <div class="pj-detail-label" style="margin-bottom:4px;">Publish to Website</div>
+                            <div style="font-size:0.78rem;color:var(--admin-muted);">Add this project to the public showcase. A photo is required.</div>
+                        </div>
+                        <button type="button" class="pj-action-btn"
+                                onclick="pjToggleEl('pubPanel_<?= $pId ?>', this)"
+                                data-label-open="Show Publish Form" data-label-close="Cancel">
+                            Show Publish Form
+                        </button>
+                    </div>
+
+                    <div id="pubPanel_<?= $pId ?>" style="display:none;">
+                        <form method="POST" enctype="multipart/form-data"
+                              style="background:var(--ysc-bg);border:1px solid var(--admin-border);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:12px;">
+                            <input type="hidden" name="project_id" value="<?= $pId ?>">
+
+                            <div class="admin-field" style="margin-bottom:0;">
+                                <label>Project Title on Website <span style="color:#dc2626;">*</span></label>
+                                <input type="text" name="pub_title"
+                                       value="<?= htmlspecialchars($project['ProjectTitle'] ?? '') ?>"
+                                       placeholder="Title shown on the public projects page"
+                                       required>
+                            </div>
+
+                            <div class="admin-field" style="margin-bottom:0;">
+                                <label>Summary / Description</label>
+                                <textarea name="pub_summary" rows="3"
+                                          placeholder="Brief description shown on the website…"><?= htmlspecialchars($project['Description'] ?? '') ?></textarea>
+                            </div>
+
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                                <div class="admin-field" style="margin-bottom:0;">
+                                    <label>Display Status</label>
+                                    <select name="pub_status">
+                                        <option value="Ongoing"   <?= $project['ProjectStatus']==='Ongoing'?'selected':'' ?>>Ongoing</option>
+                                        <option value="Completed" <?= $project['ProjectStatus']==='Completed'?'selected':'' ?>>Completed</option>
+                                        <option value="On Hold"   <?= $project['ProjectStatus']==='On Hold'?'selected':'' ?>>On Hold</option>
+                                    </select>
+                                </div>
+                                <div class="admin-field" style="margin-bottom:0;">
+                                    <label>Project Photo <span style="color:#dc2626;">*</span></label>
+                                    <input type="file" name="pub_photo" accept="image/jpeg,image/png,image/webp" required
+                                           style="padding:6px 10px;font-size:0.82rem;">
+                                    <div style="font-size:0.72rem;color:var(--admin-muted);margin-top:4px;">JPG, PNG or WEBP. Will appear on the website.</div>
+                                </div>
+                            </div>
+
+                            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                                <button type="button" class="admin-btn admin-btn-outline admin-btn-sm"
+                                        onclick="pjToggleEl('pubPanel_<?= $pId ?>', document.querySelector('[onclick*=\'pubPanel_<?= $pId ?>\']'))">
+                                    Cancel
+                                </button>
+                                <button type="submit" name="publish_to_website"
+                                        class="admin-btn admin-btn-primary admin-btn-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                    Publish to Website
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Delete -->
+                <div style="border-top:1px solid var(--admin-border);padding-top:12px;display:flex;justify-content:flex-end;">
+                    <form method="post" onsubmit="return confirm('Delete Project #<?= $pId ?>? This cannot be undone.');">
+                        <input type="hidden" name="project_id" value="<?= $pId ?>">
+                        <button type="submit" name="delete_project" class="admin-btn admin-btn-danger admin-btn-sm">
+                            Delete Project
+                        </button>
+                    </form>
+                </div>
+
             </div>
 
         </div>

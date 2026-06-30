@@ -11,7 +11,111 @@ $employeeId        = (int) $_SESSION['user_id'];
 $successMsg = '';
 $errorMsg   = '';
 
-// ── EDIT SHOWCASE PROJECT ───────────────────────────────────
+// ── PUBLISH PROJECT TO WEBSITE ──────────────────────────────
+if (isset($_POST['publish_to_website'], $_POST['project_id'])) {
+    $pubId      = (int) $_POST['project_id'];
+    $pubTitle   = trim(mysqli_real_escape_string($conn, $_POST['pub_title']));
+    $pubSummary = trim(mysqli_real_escape_string($conn, $_POST['pub_summary']));
+    $pubStatus  = mysqli_real_escape_string($conn, $_POST['pub_status']);
+
+    // Fetch project details for client update
+    $projRow = mysqli_fetch_assoc(mysqli_query($conn,
+        "SELECT p.StartDate, p.EndDate, a.ProjectTitle, a.ProjectLocation, a.UserID
+         FROM Project p
+         JOIN Application a ON p.ApplicationID = a.ApplicationID
+         WHERE p.ProjectID = {$pubId} LIMIT 1"
+    ));
+
+    if ($pubTitle === '') {
+        $errorMsg = "Title is required to publish.";
+    } elseif (empty($_FILES['pub_photo']['name'])) {
+        $errorMsg = "A photo is required to publish the project to the website.";
+    } else {
+        // Handle photo upload
+        $uploadDir = "assets/projects/";
+        $ext = strtolower(pathinfo($_FILES['pub_photo']['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['jpg','jpeg','png','webp'])) {
+            $errorMsg = "Invalid image format. Use JPG, PNG, or WEBP.";
+        } else {
+            $filename = 'proj_' . $pubId . '_' . time() . '.' . $ext;
+            $dest     = $uploadDir . $filename;
+
+            if (!move_uploaded_file($_FILES['pub_photo']['tmp_name'], $dest)) {
+                $errorMsg = "Failed to upload image.";
+            } else {
+                $escImg   = mysqli_real_escape_string($conn, $dest);
+                $startVal = !empty($projRow['StartDate'])
+                    ? "'" . mysqli_real_escape_string($conn, $projRow['StartDate']) . "'"
+                    : 'NULL';
+                $endVal   = !empty($projRow['EndDate'])
+                    ? "'" . mysqli_real_escape_string($conn, $projRow['EndDate']) . "'"
+                    : 'NULL';
+
+                // Check if already on website
+                $exists = mysqli_fetch_assoc(mysqli_query($conn,
+                    "SELECT ProjectShowcaseID FROM ProjectShowcase WHERE Title='{$pubTitle}' LIMIT 1"
+                ));
+
+                if ($exists) {
+                    // Update existing
+                    $scID = (int) $exists['ProjectShowcaseID'];
+                    mysqli_query($conn,
+                        "UPDATE ProjectShowcase SET Summary='{$pubSummary}', Status='{$pubStatus}',
+                         StartDate={$startVal}, EndDate={$endVal}, ImageURL='{$escImg}'
+                         WHERE ProjectShowcaseID={$scID}"
+                    );
+                    $successMsg = "Website showcase updated.";
+                } else {
+                    // Insert new
+                    mysqli_query($conn,
+                        "INSERT INTO ProjectShowcase (Title, Summary, StartDate, EndDate, Status, ImageURL)
+                         VALUES ('{$pubTitle}', '{$pubSummary}', {$startVal}, {$endVal}, '{$pubStatus}', '{$escImg}')"
+                    );
+                    $successMsg = "Project published to website.";
+                }
+
+                // Post client-visible update
+                $siteStatus = $pubStatus === 'Ongoing' ? 'has started' : 'has been added to the website';
+                $clientMsg  = "Project \"{$pubTitle}\" {$siteStatus}"
+                            . ($projRow['ProjectLocation'] ? " at {$projRow['ProjectLocation']}" : "")
+                            . ". You can now view it on our projects page.";
+                $clientMsg  = mysqli_real_escape_string($conn, $clientMsg);
+                mysqli_query($conn,
+                    "INSERT INTO Project_Update (ProjectID, EmployeeID, Status, Description, UpdateDate)
+                     VALUES ({$pubId}, {$employeeId}, 'Approved', '{$clientMsg}', CURDATE())"
+                );
+            }
+        }
+    }
+}
+
+// ── MARK SITE STARTED / NOT STARTED ────────────────────────
+if (isset($_POST['mark_site_status'], $_POST['project_id'], $_POST['site_started'])) {
+    $msId      = (int) $_POST['project_id'];
+    $msStarted = $_POST['site_started'] === '1';
+
+    // Fetch project info
+    $msRow = mysqli_fetch_assoc(mysqli_query($conn,
+        "SELECT p.StartDate, a.ProjectTitle, a.ProjectLocation
+         FROM Project p
+         JOIN Application a ON p.ApplicationID = a.ApplicationID
+         WHERE p.ProjectID = {$msId} LIMIT 1"
+    ));
+
+    $label     = $msStarted ? 'started' : 'not yet started';
+    $clientMsg = "Site update: " . htmlspecialchars_decode($msRow['ProjectTitle'] ?? 'Project')
+               . " is now marked as {$label}.";
+    if (!$msStarted && !empty($msRow['ProjectLocation'])) {
+        $clientMsg .= " Location: {$msRow['ProjectLocation']}.";
+    }
+    $clientMsg = mysqli_real_escape_string($conn, $clientMsg);
+
+    mysqli_query($conn,
+        "INSERT INTO Project_Update (ProjectID, EmployeeID, Status, Description, UpdateDate)
+         VALUES ({$msId}, {$employeeId}, 'Reviewed', '{$clientMsg}', CURDATE())"
+    );
+    $successMsg = "Site status posted to client updates.";
+}
 if (isset($_POST['edit_showcase'], $_POST['showcase_id'])) {
     $scID    = (int) $_POST['showcase_id'];
     $scTitle = mysqli_real_escape_string($conn, trim($_POST['showcase_title']));
@@ -490,6 +594,17 @@ include("../includes/manager/layout_start.php");
 </style>
 
 <script>
+function pjToggleEl(id, btn) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var isOpen = el.style.display !== 'none';
+    el.style.display = isOpen ? 'none' : 'block';
+    if (btn) {
+        btn.textContent = isOpen ? (btn.dataset.labelOpen || 'Show') : (btn.dataset.labelClose || 'Cancel');
+        btn.classList.toggle('active', !isOpen);
+    }
+}
+
 function pjToggleDetail(detailId, editId, btn) {
     var detail = document.getElementById(detailId);
     var edit   = document.getElementById(editId);
