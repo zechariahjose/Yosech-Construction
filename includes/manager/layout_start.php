@@ -53,7 +53,7 @@ $mgrPendingRentals = $mgrPendingRentals ?? 0;
             </a>
             <a href="<?= BASE_URL ?>/manager/mgr_projects.php" class="admin-nav-link<?= $mgrActiveNav === 'projects' ? ' active' : '' ?>">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M2 20h20M5 20V8l7-4 7 4v12"/></svg>
-                Active Projects
+                Projects
             </a>
             <a href="<?= BASE_URL ?>/manager/mgr_applications.php" class="admin-nav-link<?= $mgrActiveNav === 'applications' ? ' active' : '' ?>">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
@@ -68,11 +68,11 @@ $mgrPendingRentals = $mgrPendingRentals ?? 0;
             </a>
             <a href="<?= BASE_URL ?>/manager/mgr_equipment.php" class="admin-nav-link<?= $mgrActiveNav === 'equipment' ? ' active' : '' ?>">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-                Assigned Equipment
+                Equipment
             </a>
             <a href="<?= BASE_URL ?>/manager/mgr_settings.php" class="admin-nav-link<?= $mgrActiveNav === 'settings' ? ' active' : '' ?>">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-                My Settings
+                Settings
             </a>
         </nav>
 
