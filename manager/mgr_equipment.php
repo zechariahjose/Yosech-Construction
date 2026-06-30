@@ -10,22 +10,55 @@ $mgrPendingRentals = managerPendingRentals($conn);
 $successMsg = '';
 $errorMsg   = '';
 
-// ── UPDATE EQUIPMENT AVAILABILITY ──────────────────────────
-if (isset($_POST['update_availability'], $_POST['equipment_offering_id'])) {
-    $eoID     = (int) $_POST['equipment_offering_id'];
-    $newStatus = mysqli_real_escape_string($conn, $_POST['availability_status']);
-    // Update EquipmentOffering (drives the website display)
-    mysqli_query($conn, "UPDATE EquipmentOffering SET AvailabilityStatus='{$newStatus}' WHERE EquipmentOfferingID={$eoID}");
-    // Also sync the linked Equipment unit
-    mysqli_query($conn, "UPDATE Equipment SET AvailabilityStatus=CASE '{$newStatus}'
-        WHEN 'Available' THEN 'Available'
-        WHEN 'Unavailable' THEN 'Rented'
-        ELSE 'Under Maintenance'
-        END WHERE EquipmentOfferingID={$eoID}");
-    $successMsg = "Equipment availability updated.";
+// ── EDIT EQUIPMENT DETAILS ──────────────────────────────────
+if (isset($_POST['edit_equipment'], $_POST['equipment_offering_id'])) {
+    $eoID    = (int) $_POST['equipment_offering_id'];
+    $name    = mysqli_real_escape_string($conn, trim($_POST['edit_name']));
+    $model   = mysqli_real_escape_string($conn, trim($_POST['edit_model']));
+    $desc    = mysqli_real_escape_string($conn, trim($_POST['edit_description']));
+    $specs   = mysqli_real_escape_string($conn, trim($_POST['edit_specs']));
+    $hourly  = (float) $_POST['edit_hourly'];
+    $daily   = (float) $_POST['edit_daily'];
+    $weekly  = (float) $_POST['edit_weekly'];
+    $monthly = (float) $_POST['edit_monthly'];
+    $status  = mysqli_real_escape_string($conn, $_POST['edit_availability']);
+
+    if ($name !== '') {
+        mysqli_query($conn,
+            "UPDATE EquipmentOffering
+             SET Name='{$name}', Model='{$model}', Description='{$desc}', Specs='{$specs}',
+                 HourlyRate={$hourly}, DailyRate={$daily}, WeeklyRate={$weekly}, MonthlyRate={$monthly},
+                 AvailabilityStatus='{$status}'
+             WHERE EquipmentOfferingID={$eoID}"
+        );
+        // Sync linked Equipment unit availability
+        $unitStatus = match($status) {
+            'Available'         => 'Available',
+            'Under Maintenance' => 'Under Maintenance',
+            default             => 'Rented',
+        };
+        mysqli_query($conn, "UPDATE Equipment SET AvailabilityStatus='{$unitStatus}' WHERE EquipmentOfferingID={$eoID}");
+        $successMsg = "Equipment updated successfully.";
+    } else {
+        $errorMsg = "Name cannot be empty.";
+    }
 }
 
-// ── FETCH EQUIPMENT CATALOG (mirrors website) ───────────────
+// ── UPDATE EQUIPMENT AVAILABILITY (quick) ──────────────────
+if (isset($_POST['update_availability'], $_POST['equipment_offering_id'])) {
+    $eoID      = (int) $_POST['equipment_offering_id'];
+    $newStatus = mysqli_real_escape_string($conn, $_POST['availability_status']);
+    mysqli_query($conn, "UPDATE EquipmentOffering SET AvailabilityStatus='{$newStatus}' WHERE EquipmentOfferingID={$eoID}");
+    $unitStatus = match($newStatus) {
+        'Available'         => 'Available',
+        'Under Maintenance' => 'Under Maintenance',
+        default             => 'Rented',
+    };
+    mysqli_query($conn, "UPDATE Equipment SET AvailabilityStatus='{$unitStatus}' WHERE EquipmentOfferingID={$eoID}");
+    $successMsg = "Availability updated.";
+}
+
+// ── FETCH EQUIPMENT CATALOG ─────────────────────────────────
 $catalogResult = mysqli_query($conn,
     "SELECT eo.*,
             e.EquipmentID, e.AvailabilityStatus AS UnitStatus, e.NeedsOperator, e.EquipmentPaymentStatus
@@ -43,10 +76,10 @@ while ($row = mysqli_fetch_assoc($catalogResult)) {
     $catalogRows[] = $row;
     $totalUnits++;
     match ($row['AvailabilityStatus']) {
-        'Available'          => $availableCount++,
-        'Unavailable'        => $unavailCount++,
-        'Under Maintenance'  => $maintCount++,
-        default              => null,
+        'Available'         => $availableCount++,
+        'Unavailable'       => $unavailCount++,
+        'Under Maintenance' => $maintCount++,
+        default             => null,
     };
 }
 
@@ -66,11 +99,11 @@ $assignmentsResult = mysqli_query($conn,
      ORDER BY a.RentalStartDate ASC, a.ApplicationID DESC"
 );
 
-$assignmentRows  = [];
+$assignmentRows    = [];
 $activeAssignments = 0;
-$endingSoon      = 0;
-$today           = date('Y-m-d');
-$soonDate        = date('Y-m-d', strtotime('+7 days'));
+$endingSoon        = 0;
+$today             = date('Y-m-d');
+$soonDate          = date('Y-m-d', strtotime('+7 days'));
 
 while ($row = mysqli_fetch_assoc($assignmentsResult)) {
     $assignmentRows[] = $row;
@@ -80,10 +113,9 @@ while ($row = mysqli_fetch_assoc($assignmentsResult)) {
 
 $mgrActiveNav    = 'equipment';
 $mgrPageTitle    = 'Equipment';
-$mgrPageSubtitle = 'Manage the equipment catalog displayed on the website and track active rental assignments.';
+$mgrPageSubtitle = 'Manage the equipment catalog and track active rental assignments.';
 $mgrPageActions  = '
     <a href="' . BASE_URL . '/manager/mgr_applications.php?type=rental&status=Pending" class="admin-btn admin-btn-primary">Pending Assignments</a>
-    <a href="' . BASE_URL . '/equipment.php" class="admin-btn admin-btn-outline" target="_blank" rel="noopener">View Website →</a>
 ';
 
 include("../includes/manager/layout_start.php");
@@ -121,12 +153,12 @@ include("../includes/manager/layout_start.php");
 </div>
 
 <!-- ══════════════════════════════════════════════════════════
-     SECTION 1 — EQUIPMENT CATALOG (mirrors website)
+     SECTION 1 — EQUIPMENT CATALOG
      ══════════════════════════════════════════════════════════ -->
 <div style="margin-bottom:8px;">
     <h2 class="admin-page-title" style="font-size:1rem;margin-bottom:4px;">Equipment Catalog</h2>
     <p class="admin-page-sub" style="margin-bottom:16px;">
-        The catalog displayed on the public website. Update availability status here — changes reflect on the site immediately.
+        The catalog displayed on the public website. Edit details or update availability — changes reflect on the site immediately.
     </p>
 </div>
 
@@ -140,19 +172,18 @@ include("../includes/manager/layout_start.php");
             'Unavailable'       => ['class' => 'admin-badge-delay',      'label' => 'Unavailable'],
             'Under Maintenance' => ['class' => 'admin-badge-inspection', 'label' => 'Under Maintenance'],
         ];
-        $eqBadge = $statusMap[$eq['AvailabilityStatus']] ?? ['class' => 'admin-badge-track', 'label' => $eq['AvailabilityStatus']];
-        $imgSrc  = !empty($eq['ImageURL'])
+        $eqBadge  = $statusMap[$eq['AvailabilityStatus']] ?? ['class' => 'admin-badge-track', 'label' => $eq['AvailabilityStatus']];
+        $imgSrc   = !empty($eq['ImageURL'])
             ? BASE_URL . '/' . ltrim(htmlspecialchars($eq['ImageURL']), '/')
             : null;
-
-        // Parse specs (dot-separated)
-        $specs = !empty($eq['Specs'])
+        $specs    = !empty($eq['Specs'])
             ? array_filter(array_map('trim', explode('·', $eq['Specs'])))
             : [];
+        $editId   = 'editEq_' . (int) $eq['EquipmentOfferingID'];
     ?>
     <div class="admin-card">
 
-        <!-- Card header -->
+        <!-- Header -->
         <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
             <div style="display:flex;align-items:center;gap:12px;">
                 <?php if ($imgSrc): ?>
@@ -164,7 +195,13 @@ include("../includes/manager/layout_start.php");
                     <span class="admin-table-sub"><?= htmlspecialchars($eq['Model'] ?? '—') ?> · ID #<?= (int) $eq['EquipmentOfferingID'] ?></span>
                 </div>
             </div>
-            <span class="admin-badge <?= $eqBadge['class'] ?>"><?= $eqBadge['label'] ?></span>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                <span class="admin-badge <?= $eqBadge['class'] ?>"><?= $eqBadge['label'] ?></span>
+                <button type="button" class="admin-btn admin-btn-outline admin-btn-sm"
+                        onclick="document.getElementById('<?= $editId ?>').style.display='flex'">
+                    Edit
+                </button>
+            </div>
         </div>
 
         <!-- Description -->
@@ -191,29 +228,120 @@ include("../includes/manager/layout_start.php");
 
         <!-- Rates -->
         <div class="admin-meta-grid" style="margin-bottom:14px;">
-            <div class="admin-meta-item"><span>Daily Rate</span>₱<?= number_format((float)$eq['DailyRate'], 0) ?></div>
-            <div class="admin-meta-item"><span>Weekly Rate</span>₱<?= number_format((float)$eq['WeeklyRate'], 0) ?></div>
-            <div class="admin-meta-item"><span>Monthly Rate</span>₱<?= number_format((float)$eq['MonthlyRate'], 0) ?></div>
-            <div class="admin-meta-item"><span>Hourly Rate</span>₱<?= number_format((float)$eq['HourlyRate'], 0) ?></div>
+            <div class="admin-meta-item"><span>Daily</span>₱<?= number_format((float)$eq['DailyRate'], 0) ?></div>
+            <div class="admin-meta-item"><span>Weekly</span>₱<?= number_format((float)$eq['WeeklyRate'], 0) ?></div>
+            <div class="admin-meta-item"><span>Monthly</span>₱<?= number_format((float)$eq['MonthlyRate'], 0) ?></div>
+            <div class="admin-meta-item"><span>Hourly</span>₱<?= number_format((float)$eq['HourlyRate'], 0) ?></div>
         </div>
 
-        <!-- Update availability -->
+        <!-- Quick availability update -->
         <form method="POST" class="d-flex gap-2 align-items-end mb-0 js-track-form">
             <input type="hidden" name="equipment_offering_id" value="<?= (int) $eq['EquipmentOfferingID'] ?>">
             <div class="admin-field mb-0 flex-grow-1">
                 <label>Availability</label>
                 <select name="availability_status" data-original="<?= htmlspecialchars($eq['AvailabilityStatus']) ?>">
-                    <option value="Available"        <?= $eq['AvailabilityStatus'] === 'Available'        ? 'selected' : '' ?>>Available</option>
-                    <option value="Unavailable"      <?= $eq['AvailabilityStatus'] === 'Unavailable'      ? 'selected' : '' ?>>Unavailable</option>
-                    <option value="Under Maintenance"<?= $eq['AvailabilityStatus'] === 'Under Maintenance'? 'selected' : '' ?>>Under Maintenance</option>
+                    <option value="Available"         <?= $eq['AvailabilityStatus'] === 'Available'         ? 'selected' : '' ?>>Available</option>
+                    <option value="Unavailable"       <?= $eq['AvailabilityStatus'] === 'Unavailable'       ? 'selected' : '' ?>>Unavailable</option>
+                    <option value="Under Maintenance" <?= $eq['AvailabilityStatus'] === 'Under Maintenance' ? 'selected' : '' ?>>Under Maintenance</option>
                 </select>
             </div>
             <button type="submit" name="update_availability" class="admin-btn admin-btn-primary admin-btn-sm" disabled>Save</button>
         </form>
 
-    </div>
+    </div><!-- /.admin-card -->
+
+    <!-- ── Edit Modal ──────────────────────────────────────── -->
+    <div id="<?= $editId ?>"
+         style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:2000;align-items:center;justify-content:center;"
+         onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#fff;border-radius:10px;padding:32px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;position:relative;">
+            <button type="button"
+                    onclick="document.getElementById('<?= $editId ?>').style.display='none'"
+                    style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:#6b7280;">✕</button>
+
+            <h2 class="admin-page-title" style="font-size:1.05rem;margin-bottom:4px;">Edit Equipment</h2>
+            <p class="admin-page-sub" style="margin-bottom:20px;">
+                <?= htmlspecialchars($eq['Name']) ?> · ID #<?= (int) $eq['EquipmentOfferingID'] ?>
+            </p>
+
+            <form method="POST" class="js-edit-modal-form">
+                <input type="hidden" name="equipment_offering_id" value="<?= (int) $eq['EquipmentOfferingID'] ?>">
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="admin-field">
+                        <label>Name <span style="color:red">*</span></label>
+                        <input type="text" name="edit_name"
+                               value="<?= htmlspecialchars($eq['Name']) ?>"
+                               data-original="<?= htmlspecialchars($eq['Name']) ?>"
+                               required>
+                    </div>
+                    <div class="admin-field">
+                        <label>Model</label>
+                        <input type="text" name="edit_model"
+                               value="<?= htmlspecialchars($eq['Model'] ?? '') ?>"
+                               data-original="<?= htmlspecialchars($eq['Model'] ?? '') ?>">
+                    </div>
+                </div>
+
+                <div class="admin-field">
+                    <label>Description</label>
+                    <textarea name="edit_description" rows="3"
+                              data-original="<?= htmlspecialchars($eq['Description'] ?? '') ?>"><?= htmlspecialchars($eq['Description'] ?? '') ?></textarea>
+                </div>
+
+                <div class="admin-field">
+                    <label>Specs <span class="admin-table-sub" style="text-transform:none;letter-spacing:0;">(separate entries with ·)</span></label>
+                    <textarea name="edit_specs" rows="3"
+                              data-original="<?= htmlspecialchars($eq['Specs'] ?? '') ?>"><?= htmlspecialchars($eq['Specs'] ?? '') ?></textarea>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="admin-field">
+                        <label>Hourly Rate (₱)</label>
+                        <input type="number" name="edit_hourly" step="0.01" min="0"
+                               value="<?= (float)$eq['HourlyRate'] ?>"
+                               data-original="<?= (float)$eq['HourlyRate'] ?>">
+                    </div>
+                    <div class="admin-field">
+                        <label>Daily Rate (₱)</label>
+                        <input type="number" name="edit_daily" step="0.01" min="0"
+                               value="<?= (float)$eq['DailyRate'] ?>"
+                               data-original="<?= (float)$eq['DailyRate'] ?>">
+                    </div>
+                    <div class="admin-field">
+                        <label>Weekly Rate (₱)</label>
+                        <input type="number" name="edit_weekly" step="0.01" min="0"
+                               value="<?= (float)$eq['WeeklyRate'] ?>"
+                               data-original="<?= (float)$eq['WeeklyRate'] ?>">
+                    </div>
+                    <div class="admin-field">
+                        <label>Monthly Rate (₱)</label>
+                        <input type="number" name="edit_monthly" step="0.01" min="0"
+                               value="<?= (float)$eq['MonthlyRate'] ?>"
+                               data-original="<?= (float)$eq['MonthlyRate'] ?>">
+                    </div>
+                </div>
+
+                <div class="admin-field">
+                    <label>Availability Status</label>
+                    <select name="edit_availability" data-original="<?= htmlspecialchars($eq['AvailabilityStatus']) ?>">
+                        <option value="Available"         <?= $eq['AvailabilityStatus'] === 'Available'         ? 'selected' : '' ?>>Available</option>
+                        <option value="Unavailable"       <?= $eq['AvailabilityStatus'] === 'Unavailable'       ? 'selected' : '' ?>>Unavailable</option>
+                        <option value="Under Maintenance" <?= $eq['AvailabilityStatus'] === 'Under Maintenance' ? 'selected' : '' ?>>Under Maintenance</option>
+                    </select>
+                </div>
+
+                <div class="d-flex gap-2 justify-content-end mt-2">
+                    <button type="button" class="admin-btn admin-btn-outline"
+                            onclick="document.getElementById('<?= $editId ?>').style.display='none'">Cancel</button>
+                    <button type="submit" name="edit_equipment" class="admin-btn admin-btn-primary" disabled>Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div><!-- /.edit modal -->
+
     <?php endforeach; ?>
-</div>
+</div><!-- /.admin-card-grid -->
 <?php endif; ?>
 
 <hr class="admin-divider" style="margin-bottom:32px;">
@@ -294,7 +422,7 @@ include("../includes/manager/layout_start.php");
 
 <script>
 (function () {
-    document.querySelectorAll('.js-track-form').forEach(function (form) {
+    function bindTrackForm(form) {
         var btn     = form.querySelector('button[type="submit"]');
         var tracked = form.querySelectorAll('[data-original]');
         if (!btn || !tracked.length) return;
@@ -304,13 +432,18 @@ include("../includes/manager/layout_start.php");
                 return el.value !== el.dataset.original;
             });
         }
-
         tracked.forEach(function (el) {
             el.addEventListener('change', check);
             el.addEventListener('input',  check);
         });
         check();
-    });
+    }
+
+    // Quick availability forms
+    document.querySelectorAll('.js-track-form').forEach(bindTrackForm);
+
+    // Edit modal forms
+    document.querySelectorAll('.js-edit-modal-form').forEach(bindTrackForm);
 })();
 </script>
 
