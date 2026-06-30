@@ -104,20 +104,6 @@ $mgrPendingRentals = $mgrPendingRentals ?? 0;
                         <span class="admin-icon-dot"></span>
                     <?php endif; ?>
                 </a>
-                <button type="button" class="admin-icon-btn" title="View public site" onclick="document.getElementById('ysc-restricted-modal').style.display='flex'">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                </button>
-
-                <div id="ysc-restricted-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
-                    <div style="background:#fff;border-radius:10px;padding:36px 32px;max-width:380px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.18);text-align:center;">
-                        <div style="width:52px;height:52px;border-radius:50%;background:#eef2f6;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="#6b7f94" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-                        </div>
-                        <h2 style="font-size:1.05rem;font-weight:800;color:#111827;margin:0 0 10px;">Access Restricted</h2>
-                        <p style="font-size:0.84rem;color:#6b7280;line-height:1.6;margin:0 0 24px;">The client interface is not accessible from the project manager console. You are restricted to the dashboard and its management tools only.</p>
-                        <button type="button" onclick="document.getElementById('ysc-restricted-modal').style.display='none'" style="background:#111;color:#fff;border:none;border-radius:6px;padding:10px 28px;font-size:0.82rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;">Got it</button>
-                    </div>
-                </div>
                 <div class="admin-user">
                     <div class="admin-user-meta">
                         <div class="admin-user-name"><?= htmlspecialchars($mgrDisplayName) ?></div>
