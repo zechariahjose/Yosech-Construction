@@ -91,38 +91,22 @@ if (isset($_POST['remove_employee'], $_POST['target_employee_id'])) {
     }
 }
 
-// ── RESET EMPLOYEE PASSWORD ─────────────────────────────────
+// ── RESET EMPLOYEE PASSWORD (default: 123) ─────────────────
 if (isset($_POST['reset_employee_pw'], $_POST['target_employee_id'])) {
     $tid  = (int) $_POST['target_employee_id'];
-    $npw  = $_POST['reset_emp_password'];
-    $ncpw = $_POST['reset_emp_confirm'];
-    if ($npw !== $ncpw) {
-        $error = 'Passwords do not match.';
-    } elseif ($pwErr = passwordStrengthError($npw)) {
-        $error = $pwErr;
-    } else {
-        $hash = password_hash($npw, PASSWORD_DEFAULT);
-        $up   = mysqli_prepare($conn, "UPDATE Employee SET Password=? WHERE EmployeeID=?");
-        mysqli_stmt_bind_param($up, "si", $hash, $tid);
-        mysqli_stmt_execute($up) ? $success = 'Employee password reset.' : $error = 'Failed to reset password.';
-    }
+    $hash = password_hash('123', PASSWORD_DEFAULT);
+    $up   = mysqli_prepare($conn, "UPDATE Employee SET Password=? WHERE EmployeeID=?");
+    mysqli_stmt_bind_param($up, "si", $hash, $tid);
+    mysqli_stmt_execute($up) ? $success = 'Password reset to default (123). The user should change it after logging in.' : $error = 'Failed to reset password.';
 }
 
-// ── RESET CLIENT PASSWORD ───────────────────────────────────
+// ── RESET CLIENT PASSWORD (default: 123) ───────────────────
 if (isset($_POST['reset_client_pw'], $_POST['target_client_id'])) {
     $tid  = (int) $_POST['target_client_id'];
-    $npw  = $_POST['reset_cli_password'];
-    $ncpw = $_POST['reset_cli_confirm'];
-    if ($npw !== $ncpw) {
-        $error = 'Passwords do not match.';
-    } elseif ($pwErr = passwordStrengthError($npw)) {
-        $error = $pwErr;
-    } else {
-        $hash = password_hash($npw, PASSWORD_DEFAULT);
-        $up   = mysqli_prepare($conn, "UPDATE Client SET Client_Password=? WHERE UserID=?");
-        mysqli_stmt_bind_param($up, "si", $hash, $tid);
-        mysqli_stmt_execute($up) ? $success = 'Client password reset.' : $error = 'Failed to reset password.';
-    }
+    $hash = password_hash('123', PASSWORD_DEFAULT);
+    $up   = mysqli_prepare($conn, "UPDATE Client SET Client_Password=? WHERE UserID=?");
+    mysqli_stmt_bind_param($up, "si", $hash, $tid);
+    mysqli_stmt_execute($up) ? $success = 'Password reset to default (123). The client should change it after logging in.' : $error = 'Failed to reset password.';
 }
 
 // ── DATA ────────────────────────────────────────────────────
@@ -328,10 +312,10 @@ include("../includes/admin/layout_start.php");
                 <td><?= htmlspecialchars($emp['ContactNumber'] ?: '—') ?></td>
                 <td>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                        <button type="button" class="admin-btn admin-btn-outline admin-btn-sm"
-                                onclick="openResetEmp(<?= (int)$emp['EmployeeID'] ?>, '<?= htmlspecialchars(addslashes($emp['Username'])) ?>')">
-                            Reset Password
-                        </button>
+                        <form method="POST" style="display:inline;" onsubmit="return confirm('Reset password for <?= htmlspecialchars(addslashes($emp['Username'])) ?> to the default (123)?');">
+                            <input type="hidden" name="target_employee_id" value="<?= (int)$emp['EmployeeID'] ?>">
+                            <button type="submit" name="reset_employee_pw" class="admin-btn admin-btn-outline admin-btn-sm">Reset Password</button>
+                        </form>
                         <?php if (!$isMe): ?>
                         <form method="POST" style="display:inline;" onsubmit="return confirm('Remove <?= htmlspecialchars(addslashes($emp['Username'])) ?>? This cannot be undone.');">
                             <input type="hidden" name="target_employee_id" value="<?= (int)$emp['EmployeeID'] ?>">
@@ -367,10 +351,10 @@ include("../includes/admin/layout_start.php");
                 <td><?= htmlspecialchars($cli['Client_Username']) ?></td>
                 <td><?= htmlspecialchars($cli['Client_Email']) ?></td>
                 <td>
-                    <button type="button" class="admin-btn admin-btn-outline admin-btn-sm"
-                            onclick="openResetCli(<?= (int)$cli['UserID'] ?>, '<?= htmlspecialchars(addslashes($fullName)) ?>')">
-                        Reset Password
-                    </button>
+                    <form method="POST" style="display:inline;" onsubmit="return confirm('Reset password for <?= htmlspecialchars(addslashes($fullName)) ?> to the default (123)?');">
+                        <input type="hidden" name="target_client_id" value="<?= (int)$cli['UserID'] ?>">
+                        <button type="submit" name="reset_client_pw" class="admin-btn admin-btn-outline admin-btn-sm">Reset Password</button>
+                    </form>
                 </td>
             </tr>
             <?php endwhile; ?>
@@ -383,41 +367,7 @@ include("../includes/admin/layout_start.php");
     </main>
 </div><!-- /.adm-st-layout -->
 
-<!-- ── Reset Employee Password Modal ─────────────────────── -->
-<div id="resetEmpModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
-    <div style="background:#fff;border-radius:10px;padding:32px;width:100%;max-width:420px;position:relative;">
-        <button type="button" onclick="document.getElementById('resetEmpModal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:#6b7280;">✕</button>
-        <h2 class="admin-page-title" style="font-size:1.05rem;margin-bottom:4px;">Reset Employee Password</h2>
-        <p class="admin-page-sub" id="resetEmpName" style="margin-bottom:20px;"></p>
-        <form method="POST" id="resetEmpForm">
-            <input type="hidden" name="target_employee_id" id="resetEmpId">
-            <div class="admin-field"><label>New Password</label><div class="adm-pw-wrap"><input type="password" name="reset_emp_password" id="rep_pw" required style="padding-right:38px;"><button type="button" class="adm-pw-eye" onclick="togglePw('rep_pw',this)" tabindex="-1"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-            <div class="admin-field"><label>Confirm Password</label><div class="adm-pw-wrap"><input type="password" name="reset_emp_confirm" id="rec_pw" required style="padding-right:38px;"><button type="button" class="adm-pw-eye" onclick="togglePw('rec_pw',this)" tabindex="-1"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
-                <button type="button" class="admin-btn admin-btn-outline admin-btn-sm" onclick="document.getElementById('resetEmpModal').style.display='none'">Cancel</button>
-                <button type="submit" name="reset_employee_pw" id="resetEmpBtn" class="admin-btn admin-btn-primary admin-btn-sm" disabled>Reset Password</button>
-            </div>
-        </form>
-    </div>
-</div>
 
-<!-- ── Reset Client Password Modal ───────────────────────── -->
-<div id="resetCliModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
-    <div style="background:#fff;border-radius:10px;padding:32px;width:100%;max-width:420px;position:relative;">
-        <button type="button" onclick="document.getElementById('resetCliModal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:#6b7280;">✕</button>
-        <h2 class="admin-page-title" style="font-size:1.05rem;margin-bottom:4px;">Reset Client Password</h2>
-        <p class="admin-page-sub" id="resetCliName" style="margin-bottom:20px;"></p>
-        <form method="POST" id="resetCliForm">
-            <input type="hidden" name="target_client_id" id="resetCliId">
-            <div class="admin-field"><label>New Password</label><div class="adm-pw-wrap"><input type="password" name="reset_cli_password" id="rcp_pw" required style="padding-right:38px;"><button type="button" class="adm-pw-eye" onclick="togglePw('rcp_pw',this)" tabindex="-1"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-            <div class="admin-field"><label>Confirm Password</label><div class="adm-pw-wrap"><input type="password" name="reset_cli_confirm" id="rcc_pw" required style="padding-right:38px;"><button type="button" class="adm-pw-eye" onclick="togglePw('rcc_pw',this)" tabindex="-1"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
-                <button type="button" class="admin-btn admin-btn-outline admin-btn-sm" onclick="document.getElementById('resetCliModal').style.display='none'">Cancel</button>
-                <button type="submit" name="reset_client_pw" id="resetCliBtn" class="admin-btn admin-btn-primary admin-btn-sm" disabled>Reset Password</button>
-            </div>
-        </form>
-    </div>
-</div>
 
 <style>
 /* ── Settings two-column layout ───────────────────────────── */
@@ -461,23 +411,6 @@ include("../includes/admin/layout_start.php");
 function toggleEl(id) { var el=document.getElementById(id); el.style.display=el.style.display==='none'?'block':'none'; }
 function togglePw(id,btn) { var i=document.getElementById(id); i.type=i.type==='password'?'text':'password'; btn.style.color=i.type==='text'?'#f97316':''; }
 
-function openResetEmp(id, name) {
-    document.getElementById('resetEmpId').value = id;
-    document.getElementById('resetEmpName').textContent = name;
-    document.getElementById('rep_pw').value = '';
-    document.getElementById('rec_pw').value = '';
-    document.getElementById('resetEmpBtn').disabled = true;
-    document.getElementById('resetEmpModal').style.display = 'flex';
-}
-function openResetCli(id, name) {
-    document.getElementById('resetCliId').value = id;
-    document.getElementById('resetCliName').textContent = name;
-    document.getElementById('rcp_pw').value = '';
-    document.getElementById('rcc_pw').value = '';
-    document.getElementById('resetCliBtn').disabled = true;
-    document.getElementById('resetCliModal').style.display = 'flex';
-}
-
 // ── Profile change detection ─────────────────────────────────
 (function(){
     var form=document.getElementById('profileForm'); if(!form) return;
@@ -507,15 +440,7 @@ function openResetCli(id, name) {
     check();
 })();
 
-// ── Reset modal: enable when both fields filled ───────────────
-function bindResetModal(pw1Id, pw2Id, btnId) {
-    var pw1=document.getElementById(pw1Id), pw2=document.getElementById(pw2Id), btn=document.getElementById(btnId);
-    if(!pw1||!pw2||!btn) return;
-    function check(){btn.disabled=!(pw1.value.trim()&&pw2.value.trim());}
-    [pw1,pw2].forEach(function(el){el.addEventListener('input',check);});
-}
-bindResetModal('rep_pw','rec_pw','resetEmpBtn');
-bindResetModal('rcp_pw','rcc_pw','resetCliBtn');
+
 
 // ── Own password requirements checker ────────────────────────
 (function(){
