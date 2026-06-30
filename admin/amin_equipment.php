@@ -7,11 +7,7 @@ adminRequireLogin('admin/amin_equipment.php');
 $adminEmployee = adminCurrentEmployee($conn);
 $adminPendingCount = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS total FROM Application WHERE Status = 'Pending'"))['total'];
 
-if (isset($_POST['equipment_id'], $_POST['availability_status'])) {
-    $equipmentId = (int) $_POST['equipment_id'];
-    $status = mysqli_real_escape_string($conn, $_POST['availability_status']);
-    mysqli_query($conn, "UPDATE Equipment SET AvailabilityStatus = '{$status}' WHERE EquipmentID = {$equipmentId}");
-}
+// Availability updates are managed by the assigned manager, not the admin.
 
 $result = mysqli_query(
     $conn,
@@ -83,7 +79,6 @@ include("../includes/admin/layout_start.php");
                     <th>Operator</th>
                     <th>Payment</th>
                     <th>Rates</th>
-                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -112,38 +107,11 @@ include("../includes/admin/layout_start.php");
                             —
                         <?php endif; ?>
                     </td>
-                    <td>
-                        <form method="post" class="d-flex gap-2 equipment-status-form">
-                            <input type="hidden" name="equipment_id" value="<?= (int) $row['EquipmentID'] ?>">
-                            <select name="availability_status" class="equipment-status-select" data-original="<?= htmlspecialchars($row['AvailabilityStatus']) ?>" style="min-width:140px;">
-                                <option value="Available" <?= $row['AvailabilityStatus'] === 'Available' ? 'selected' : '' ?>>Available</option>
-                                <option value="Rented" <?= $row['AvailabilityStatus'] === 'Rented' ? 'selected' : '' ?>>Rented</option>
-                                <option value="Under Maintenance" <?= $row['AvailabilityStatus'] === 'Under Maintenance' ? 'selected' : '' ?>>Under Maintenance</option>
-                            </select>
-                            <button type="submit" class="admin-btn admin-btn-primary admin-btn-sm equipment-update-btn" disabled>Update</button>
-                        </form>
-                    </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
     <?php endif; ?>
 </div>
-
-<script>
-document.querySelectorAll('.equipment-status-form').forEach(function (form) {
-    var select = form.querySelector('.equipment-status-select');
-    var button = form.querySelector('.equipment-update-btn');
-
-    function syncButtonState() {
-        var changed = select.value !== select.dataset.original;
-        button.disabled = !changed;
-        button.classList.toggle('admin-btn-disabled', !changed);
-    }
-
-    select.addEventListener('change', syncButtonState);
-    syncButtonState();
-});
-</script>
 
 <?php include("../includes/admin/layout_end.php"); ?>
