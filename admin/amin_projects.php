@@ -4,27 +4,11 @@ include("../includes/admin/helpers.php");
 
 adminRequireLogin('admin/amin_projects.php');
 
-$adminEmployee = adminCurrentEmployee($conn);
+$adminEmployee    = adminCurrentEmployee($conn);
 $adminPendingCount = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS total FROM Application WHERE Status = 'Pending'"))['total'];
-$employeeId = (int) $_SESSION['user_id'];
 
-if (isset($_POST['project_id'], $_POST['project_status'], $_POST['payment_status'])) {
-    $projectId = (int) $_POST['project_id'];
-    $projectStatus = mysqli_real_escape_string($conn, $_POST['project_status']);
-    $paymentStatus = mysqli_real_escape_string($conn, $_POST['payment_status']);
-    mysqli_query($conn, "UPDATE Project SET ProjectStatus = '{$projectStatus}', ProjectPaymentStatus = '{$paymentStatus}' WHERE ProjectID = {$projectId}");
-}
-
-if (isset($_POST['add_update'], $_POST['project_id'], $_POST['update_description'])) {
-    $projectId = (int) $_POST['project_id'];
-    $desc = trim(mysqli_real_escape_string($conn, $_POST['update_description']));
-    $status = mysqli_real_escape_string($conn, $_POST['update_status'] ?? 'Reviewed');
-
-    if ($desc !== '') {
-        mysqli_query($conn, "INSERT INTO Project_Update (ProjectID, EmployeeID, Status, Description, UpdateDate)
-                             VALUES ({$projectId}, {$employeeId}, '{$status}', '{$desc}', CURDATE())");
-    }
-}
+// Project editing, status updates, and field updates are managed
+// exclusively by the Project Manager console (manager/mgr_projects.php).
 
 $statusFilter = $_GET['status'] ?? '';
 $querySql = "
@@ -43,9 +27,9 @@ if ($statusFilter !== '') {
 $querySql .= " ORDER BY p.ProjectID DESC";
 $query = mysqli_query($conn, $querySql);
 
-$adminActiveNav = 'projects';
-$adminPageTitle = 'Projects';
-$adminPageSubtitle = 'Manage project status, payment tracking, and client-facing updates.';
+$adminActiveNav   = 'projects';
+$adminPageTitle   = 'Projects';
+$adminPageSubtitle = 'Read-only overview of all projects. Use the Project Manager console to edit, update, or delete projects.';
 $adminPageActions = '
     <a href="' . BASE_URL . '/admin/amin_projects.php?status=Ongoing" class="admin-btn admin-btn-outline">Ongoing</a>
     <a href="' . BASE_URL . '/admin/amin_projects.php?status=On Hold" class="admin-btn admin-btn-outline">On Hold</a>
@@ -55,8 +39,13 @@ $adminPageActions = '
 include("../includes/admin/layout_start.php");
 ?>
 
+<div class="admin-alert admin-alert-info mb-4" style="display:flex;align-items:center;gap:10px;">
+    <span>&#9432;</span>
+    <span>Project editing, status changes, and field updates are handled in the <strong>Project Manager console</strong>. This page is for oversight only.</span>
+</div>
+
 <?php if (mysqli_num_rows($query) === 0): ?>
-    <div class="admin-alert admin-alert-info">No projects found. Approve a project application to create one.</div>
+    <div class="admin-alert admin-alert-info">No projects found for this filter.</div>
 <?php else: ?>
     <div class="admin-card-grid">
         <?php while ($project = mysqli_fetch_assoc($query)):
@@ -88,58 +77,50 @@ include("../includes/admin/layout_start.php");
                     <span>Timeline</span>
                     <?= htmlspecialchars(($project['StartDate'] ?? '—') . ' to ' . ($project['EndDate'] ?? '—')) ?>
                 </div>
+                <div class="admin-meta-item">
+                    <span>Project Status</span>
+                    <?= htmlspecialchars($project['ProjectStatus']) ?>
+                </div>
+                <div class="admin-meta-item">
+                    <span>Payment Status</span>
+                    <?= htmlspecialchars($project['ProjectPaymentStatus']) ?>
+                </div>
             </div>
 
-            <div class="admin-field">
+            <?php if (!empty($project['Description'])): ?>
+            <div class="admin-field mt-2">
                 <label>Description</label>
                 <div class="small" style="line-height:1.6;color:#475569;"><?= nl2br(htmlspecialchars($project['Description'])) ?></div>
             </div>
+            <?php endif; ?>
 
-            <form method="post" class="row g-2 mb-0">
-                <input type="hidden" name="project_id" value="<?= (int) $project['ProjectID'] ?>">
-                <div class="col-md-6">
-                    <div class="admin-field mb-2">
-                        <label>Project Status</label>
-                        <select name="project_status">
-                            <?php foreach (['Ongoing', 'Completed', 'On Hold', 'Cancelled'] as $s): ?>
-                                <option value="<?= $s ?>" <?= $project['ProjectStatus'] === $s ? 'selected' : '' ?>><?= $s ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="admin-field mb-2">
-                        <label>Payment Status</label>
-                        <select name="payment_status">
-                            <?php foreach (['Unpaid', 'Paid', 'Partial'] as $s): ?>
-                                <option value="<?= $s ?>" <?= $project['ProjectPaymentStatus'] === $s ? 'selected' : '' ?>><?= $s ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-12">
-                    <button class="admin-btn admin-btn-primary admin-btn-sm">Save Status</button>
-                </div>
-            </form>
-
+            <?php
+            // Show recent field updates (read-only)
+            $updatesResult = mysqli_query($conn,
+                "SELECT pu.*, e.Username FROM Project_Update pu
+                 LEFT JOIN Employee e ON pu.EmployeeID = e.EmployeeID
+                 WHERE pu.ProjectID = " . (int) $project['ProjectID'] . "
+                 ORDER BY pu.UpdateDate DESC LIMIT 3"
+            );
+            if (mysqli_num_rows($updatesResult) > 0):
+            ?>
             <hr class="admin-divider">
-
-            <h4 class="admin-card-title" style="font-size:0.88rem;">Post Project Update</h4>
-            <form method="post">
-                <input type="hidden" name="project_id" value="<?= (int) $project['ProjectID'] ?>">
-                <input type="hidden" name="add_update" value="1">
-                <div class="admin-field">
-                    <textarea name="update_description" rows="3" placeholder="e.g. Foundation work completed, site inspection passed..." required></textarea>
-                </div>
-                <div class="d-flex gap-2 align-items-center">
-                    <select name="update_status" style="max-width:160px;">
-                        <option value="Reviewed">Reviewed</option>
-                        <option value="Approved">Approved</option>
-                        <option value="Pending">Pending</option>
-                    </select>
-                    <button class="admin-btn admin-btn-success admin-btn-sm">Post Update</button>
-                </div>
-            </form>
+            <h4 class="admin-card-title" style="font-size:0.88rem;">Recent Field Updates</h4>
+            <ul class="admin-activity-list" style="border:1px solid var(--admin-border);border-radius:6px;">
+                <?php while ($upd = mysqli_fetch_assoc($updatesResult)): ?>
+                <li class="admin-activity-item">
+                    <div class="d-flex justify-content-between gap-2">
+                        <span class="admin-badge <?= $upd['Status'] === 'Pending' ? 'admin-badge-inspection' : 'admin-badge-track' ?>"><?= htmlspecialchars($upd['Status']) ?></span>
+                        <span class="admin-activity-time"><?= htmlspecialchars($upd['UpdateDate']) ?></span>
+                    </div>
+                    <div class="admin-activity-desc mt-2"><?= htmlspecialchars($upd['Description']) ?></div>
+                    <?php if (!empty($upd['Username'])): ?>
+                        <div class="small text-muted mt-1">Posted by <?= htmlspecialchars($upd['Username']) ?></div>
+                    <?php endif; ?>
+                </li>
+                <?php endwhile; ?>
+            </ul>
+            <?php endif; ?>
         </div>
         <?php endwhile; ?>
     </div>
