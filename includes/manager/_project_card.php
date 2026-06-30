@@ -75,7 +75,7 @@ $paymentBadge = match($project['ProjectPaymentStatus']) {
             <div class="pj-detail-cols">
                 <!-- Status update -->
                 <div class="pj-detail-block">
-                    <div class="pj-detail-label">Update Status</div>
+                    <div class="pj-detail-label">Project Status</div>
                     <form method="post" class="pj-inline-form js-track-form">
                         <input type="hidden" name="project_id" value="<?= $pId ?>">
                         <select name="project_status" data-original="<?= htmlspecialchars($project['ProjectStatus']) ?>">
@@ -87,21 +87,31 @@ $paymentBadge = match($project['ProjectPaymentStatus']) {
                     </form>
                 </div>
 
-                <!-- Post update -->
+                <!-- Payment status -->
                 <div class="pj-detail-block">
+                    <div class="pj-detail-label">Payment Status</div>
+                    <form method="post" class="pj-inline-form js-track-form">
+                        <input type="hidden" name="project_id" value="<?= $pId ?>">
+                        <select name="payment_status" data-original="<?= htmlspecialchars($project['ProjectPaymentStatus']) ?>">
+                            <?php foreach (['Unpaid','Partial','Paid'] as $ps): ?>
+                                <option value="<?= $ps ?>" <?= $project['ProjectPaymentStatus']===$ps?'selected':'' ?>><?= $ps ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <button type="submit" name="update_payment" class="admin-btn admin-btn-primary admin-btn-sm" disabled>Save</button>
+                    </form>
+                </div>
+
+                <!-- Post update -->
+                <div class="pj-detail-block pj-detail-block-full">
                     <div class="pj-detail-label">Post Field Update</div>
                     <form method="post" class="js-post-update-form">
                         <input type="hidden" name="project_id" value="<?= $pId ?>">
                         <input type="hidden" name="add_update" value="1">
+                        <input type="hidden" name="update_status" value="Reviewed">
                         <textarea name="update_description" rows="2"
                                   placeholder="e.g. Foundation pour completed…" required></textarea>
                         <div class="pj-inline-form" style="margin-top:8px;">
-                            <select name="update_status">
-                                <option value="Reviewed">Reviewed</option>
-                                <option value="Pending">Pending Inspection</option>
-                                <option value="Approved">Approved</option>
-                            </select>
-                            <button class="admin-btn admin-btn-primary admin-btn-sm" disabled>Post Update</button>
+                            <button type="submit" class="admin-btn admin-btn-primary admin-btn-sm" disabled>Post Update</button>
                         </div>
                     </form>
                 </div>
@@ -115,23 +125,22 @@ $paymentBadge = match($project['ProjectPaymentStatus']) {
                     <?php while ($upd = mysqli_fetch_assoc($updatesResult)): ?>
                     <div class="pj-update-item">
                         <div class="pj-update-header">
-                            <span class="admin-badge <?= $upd['Status']==='Pending'?'admin-badge-inspection':'admin-badge-track' ?>">
+                            <span class="admin-badge <?= $upd['Status']==='Pending'?'admin-badge-inspection':($upd['Status']==='Approved'?'admin-badge-approved':'admin-badge-track') ?>">
                                 <?= htmlspecialchars($upd['Status']) ?>
                             </span>
                             <span class="pj-update-date"><?= htmlspecialchars($upd['UpdateDate']) ?></span>
                         </div>
                         <p class="pj-update-desc"><?= htmlspecialchars($upd['Description']) ?></p>
-                        <?php if ($upd['Status']==='Pending'): ?>
-                        <form method="post" class="pj-inline-form">
+                        <form method="post" class="pj-inline-form js-track-form" style="margin-top:8px;">
                             <input type="hidden" name="update_id" value="<?= (int)$upd['UpdateID'] ?>">
                             <input type="hidden" name="review_update" value="1">
-                            <select name="review_status">
-                                <option value="Reviewed">Mark Reviewed</option>
-                                <option value="Approved">Approve</option>
+                            <select name="review_status" data-original="<?= htmlspecialchars($upd['Status']) ?>">
+                                <option value="Reviewed"  <?= $upd['Status']==='Reviewed' ?'selected':'' ?>>Reviewed</option>
+                                <option value="Pending"   <?= $upd['Status']==='Pending'  ?'selected':'' ?>>Pending Inspection</option>
+                                <option value="Approved"  <?= $upd['Status']==='Approved' ?'selected':'' ?>>Approved</option>
                             </select>
-                            <button class="admin-btn admin-btn-success admin-btn-sm">Submit Review</button>
+                            <button class="admin-btn admin-btn-success admin-btn-sm" disabled>Update</button>
                         </form>
-                        <?php endif; ?>
                     </div>
                     <?php endwhile; ?>
                 </div>

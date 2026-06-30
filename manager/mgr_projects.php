@@ -112,6 +112,14 @@ if (isset($_POST['project_id'], $_POST['project_status']) && !isset($_POST['add_
     mysqli_query($conn, "UPDATE Project SET ProjectStatus='{$projectStatus}' WHERE ProjectID={$projectId}");
 }
 
+// ── UPDATE PAYMENT STATUS ───────────────────────────────────
+if (isset($_POST['update_payment'], $_POST['project_id'], $_POST['payment_status'])) {
+    $projectId     = (int) $_POST['project_id'];
+    $paymentStatus = mysqli_real_escape_string($conn, $_POST['payment_status']);
+    mysqli_query($conn, "UPDATE Project SET ProjectPaymentStatus='{$paymentStatus}' WHERE ProjectID={$projectId}");
+    $successMsg = "Payment status updated.";
+}
+
 // ── ADD UPDATE ──────────────────────────────────────────────
 if (isset($_POST['add_update'], $_POST['project_id'], $_POST['update_description'])) {
     $projectId = (int) $_POST['project_id'];
@@ -533,7 +541,7 @@ function pjCloseEdit(editId) {
     document.querySelectorAll('.js-edit-modal-form').forEach(bindTrackForm);
 
     document.querySelectorAll('.js-post-update-form').forEach(function(form) {
-        var btn      = form.querySelector('button[type="submit"]');
+        var btn      = form.querySelector('button[type="submit"], button:not([type="button"])');
         var textarea = form.querySelector('textarea');
         if (!btn || !textarea) return;
         function check() { btn.disabled = textarea.value.trim() === ''; }
