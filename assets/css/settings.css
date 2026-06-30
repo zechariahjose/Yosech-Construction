@@ -261,6 +261,14 @@
     color: #fff;
 }
 
+.settings-btn-primary:disabled {
+    background: var(--ysc-border);
+    border-color: var(--ysc-border);
+    color: var(--ysc-muted);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
 .settings-btn-outline {
     background: var(--ysc-surface);
     color: var(--ysc-text-secondary);

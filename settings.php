@@ -187,7 +187,7 @@ $displayName = $isClient ? trim(($user['Client_FirstName'] ?? '') . ' ' . ($user
                 </div>
 
                 <div class="settings-field-actions">
-                    <button type="submit" name="update_profile" class="settings-btn settings-btn-primary">Save Changes</button>
+                    <button type="submit" name="update_profile" id="saveProfileBtn" class="settings-btn settings-btn-primary" disabled>Save Changes</button>
                 </div>
 
             </form>
@@ -249,13 +249,7 @@ $displayName = $isClient ? trim(($user['Client_FirstName'] ?? '') . ' ' . ($user
                 </div>
             </div>
 
-            <div class="settings-security-row">
-                <div class="settings-security-info">
-                    <div class="settings-security-label">Two-Factor Authentication</div>
-                    <div class="settings-security-sub">Add an extra layer of security to your account.</div>
-                </div>
-                <button class="settings-btn settings-btn-outline settings-btn-sm" disabled>Coming Soon</button>
-            </div>
+
         </div>
     </div>
 
@@ -276,6 +270,8 @@ function previewAvatar(input) {
             if (svg) svg.style.display = 'none';
         };
         reader.readAsDataURL(input.files[0]);
+        // A new photo counts as a change
+        checkProfileChanges();
     }
 }
 
@@ -284,6 +280,49 @@ function togglePasswordForm() {
     form.style.display = form.style.display === 'none' ? 'block' : 'none';
 }
 
+// ── Profile change detection ──────────────────────────────────────────────────
+(function () {
+    const saveBtn = document.getElementById('saveProfileBtn');
+    if (!saveBtn) return;
+
+    // Collect all text/email inputs inside the profile form (excludes file input)
+    const profileForm = saveBtn.closest('form');
+    if (!profileForm) return;
+
+    const trackedInputs = profileForm.querySelectorAll('input[type="text"], input[type="email"]');
+
+    // Store original values on page load
+    const originals = {};
+    trackedInputs.forEach(input => {
+        originals[input.name] = input.value;
+    });
+
+    // Track whether a new photo was picked
+    let photoChanged = false;
+    const fileInput = profileForm.querySelector('input[type="file"]');
+    if (fileInput) {
+        fileInput.addEventListener('change', () => {
+            photoChanged = fileInput.files && fileInput.files.length > 0;
+            checkProfileChanges();
+        });
+    }
+
+    function checkProfileChanges() {
+        const hasTextChange = Array.from(trackedInputs).some(
+            input => input.value !== originals[input.name]
+        );
+        saveBtn.disabled = !(hasTextChange || photoChanged);
+    }
+
+    trackedInputs.forEach(input => {
+        input.addEventListener('input', checkProfileChanges);
+    });
+
+    // Initialise state
+    checkProfileChanges();
+})();
+
+// ── Password requirements checker ────────────────────────────────────────────
 (function () {
     var passwordInput = document.getElementById('new_password');
     var requirements  = document.getElementById('passwordRequirements');
