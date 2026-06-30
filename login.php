@@ -51,8 +51,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($username === '' || $password === '') {
         $error = 'Please enter your username and password.';
     } else {
+        $foundAccount = false;
+
+        // --- Check Employee table ---
         $result = mysqli_query($conn, "SELECT * FROM Employee WHERE Username = '{$username}' LIMIT 1");
-        if (mysqli_num_rows($result) > 0) {
+        if ($result && mysqli_num_rows($result) > 0) {
+            $foundAccount = true;
             $user = mysqli_fetch_assoc($result);
             $hash = $user['Password'];
             if (password_verify($password, $hash) || $hash === $password) {
@@ -64,11 +68,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        // --- Check Client table (Client_Username column) ---
         $result = mysqli_query($conn, "SELECT * FROM Client WHERE Client_Username = '{$username}' LIMIT 1");
-        if (mysqli_num_rows($result) === 0)
-            $result = mysqli_query($conn, "SELECT * FROM Client WHERE Username = '{$username}' LIMIT 1");
+        // Fallback to Username column if Client_Username column doesn't exist or returns nothing
+        if (!$result || mysqli_num_rows($result) === 0) {
+            $result2 = mysqli_query($conn, "SELECT * FROM Client WHERE Username = '{$username}' LIMIT 1");
+            if ($result2) $result = $result2;
+        }
 
-        if (mysqli_num_rows($result) > 0) {
+        if ($result && mysqli_num_rows($result) > 0) {
+            $foundAccount = true;
             $user = mysqli_fetch_assoc($result);
             $hash = $user['Client_Password'] ?? $user['Password'] ?? '';
             if (password_verify($password, $hash) || $hash === $password) {
@@ -80,11 +89,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
         }
-        $error = 'Invalid username or password.';
+
+        if (!$foundAccount) {
+            $error = 'No account found with that username. <a href="' . BASE_URL . '/signup.php" style="color:#991b1b;font-weight:600;text-decoration:underline;">Create one here.</a>';
+        } else {
+            $error = 'Incorrect password. Please try again.';
+        }
     }
 }
 
-if (isset($_GET['error'])) $error = 'Invalid username or password.';
+if (isset($_GET['error'])) $error = 'Invalid username or password. If you don\'t have an account, <a href="' . BASE_URL . '/signup.php" style="color:#991b1b;font-weight:600;text-decoration:underline;">sign up here</a>.';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -124,7 +138,7 @@ if (isset($_GET['error'])) $error = 'Invalid username or password.';
                 <div class="login-alert login-alert-success"><?= htmlspecialchars($success) ?></div>
             <?php endif; ?>
             <?php if ($error): ?>
-                <div class="login-alert login-alert-error"><?= htmlspecialchars($error) ?></div>
+                <div class="login-alert login-alert-error"><?= $error ?></div>
             <?php endif; ?>
 
             <form method="post" action="<?= BASE_URL ?>/login.php">
