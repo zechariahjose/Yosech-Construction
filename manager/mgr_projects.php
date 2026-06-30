@@ -89,17 +89,23 @@ if (isset($_POST['review_update'], $_POST['update_id'])) {
     mysqli_query($conn, "UPDATE Project_Update SET Status='{$reviewStatus}' WHERE UpdateID={$updateId}");
 }
 
-// ── FETCH SHOWCASE PROJECTS (website) ──────────────────────
+// ── FETCH SHOWCASE PROJECTS (website) — split by status ────
 $showcaseResult = mysqli_query($conn,
     "SELECT * FROM ProjectShowcase ORDER BY StartDate DESC"
 );
-$showcaseRows = [];
+$showcaseActive = [];  // Ongoing
+$showcaseRest   = [];  // everything else
 while ($row = mysqli_fetch_assoc($showcaseResult)) {
-    $showcaseRows[] = $row;
+    $row['_source'] = 'showcase';
+    if ($row['Status'] === 'Ongoing') {
+        $showcaseActive[] = $row;
+    } else {
+        $showcaseRest[] = $row;
+    }
 }
 
 // ── FETCH INTERNAL PROJECTS — Ongoing only ─────────────────
-$activeProjects = mysqli_query($conn,
+$internalActiveResult = mysqli_query($conn,
     "SELECT p.*, a.ApplicationType, a.ProjectTitle, a.ProjectLocation,
             c.Client_FirstName, c.Client_LastName, c.Client_ContactNumber
      FROM Project p
@@ -108,24 +114,32 @@ $activeProjects = mysqli_query($conn,
      WHERE p.ProjectStatus = 'Ongoing'
      ORDER BY p.ProjectID DESC"
 );
-$activeRows = [];
-while ($row = mysqli_fetch_assoc($activeProjects)) {
-    $activeRows[] = $row;
+$internalActiveRows = [];
+while ($row = mysqli_fetch_assoc($internalActiveResult)) {
+    $row['_source'] = 'internal';
+    $internalActiveRows[] = $row;
 }
 
-// ── FETCH INTERNAL PROJECTS — All ──────────────────────────
-$allProjects = mysqli_query($conn,
+// ── FETCH INTERNAL PROJECTS — Non-ongoing ──────────────────
+$internalRestResult = mysqli_query($conn,
     "SELECT p.*, a.ApplicationType, a.ProjectTitle, a.ProjectLocation,
             c.Client_FirstName, c.Client_LastName, c.Client_ContactNumber
      FROM Project p
      JOIN Application a ON p.ApplicationID = a.ApplicationID
      JOIN Client c ON a.UserID = c.UserID
-     ORDER BY FIELD(p.ProjectStatus,'Ongoing','On Hold','Completed','Cancelled'), p.ProjectID DESC"
+     WHERE p.ProjectStatus != 'Ongoing'
+     ORDER BY FIELD(p.ProjectStatus,'On Hold','Completed','Cancelled'), p.ProjectID DESC"
 );
-$allRows = [];
-while ($row = mysqli_fetch_assoc($allProjects)) {
-    $allRows[] = $row;
+$internalRestRows = [];
+while ($row = mysqli_fetch_assoc($internalRestResult)) {
+    $row['_source'] = 'internal';
+    $internalRestRows[] = $row;
 }
+
+// Merge: Active = showcase Ongoing + internal Ongoing
+// All   = showcase non-ongoing + internal non-ongoing
+$activeRows = array_merge($showcaseActive, $internalActiveRows);
+$allRows    = array_merge($showcaseRest, $internalRestRows);
 
 $mgrActiveNav    = 'projects';
 $mgrPageTitle    = 'Projects';
@@ -145,91 +159,7 @@ include("../includes/manager/layout_start.php");
 <?php endif; ?>
 
 <!-- ══════════════════════════════════════════════════════════
-     SECTION 1 — WEBSITE PROJECTS (ProjectShowcase)
-     ══════════════════════════════════════════════════════════ -->
-<div style="margin-bottom:8px;">
-    <h2 class="admin-page-title" style="font-size:1rem;margin-bottom:4px;">
-        <span style="display:inline-flex;align-items:center;gap:8px;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#f97316" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            Website Projects
-        </span>
-    </h2>
-    <p class="admin-page-sub" style="margin-bottom:16px;">Projects displayed on the public-facing website. You can update their status and end date here.</p>
-</div>
-
-<?php if (count($showcaseRows) === 0): ?>
-    <div class="admin-alert admin-alert-info" style="margin-bottom:32px;">No website projects found.</div>
-<?php else: ?>
-<div class="admin-table-wrap" style="margin-bottom:40px;">
-    <table class="admin-table">
-        <thead>
-            <tr>
-                <th>Title</th>
-                <th>Summary</th>
-                <th>Start Date</th>
-                <th>End Date</th>
-                <th>Status</th>
-                <th style="text-align:center;">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-        <?php foreach ($showcaseRows as $sc):
-            $scStatusMap = [
-                'Ongoing'   => 'admin-badge-active',
-                'Completed' => 'admin-badge-track',
-                'On Hold'   => 'admin-badge-inspection',
-                'Cancelled' => 'admin-badge-danger',
-            ];
-            $scBadge = $scStatusMap[$sc['Status']] ?? 'admin-badge-track';
-            $imgSrc  = !empty($sc['ImageURL'])
-                ? BASE_URL . '/' . ltrim(htmlspecialchars($sc['ImageURL']), '/')
-                : null;
-        ?>
-        <tr>
-            <td>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <?php if ($imgSrc): ?>
-                        <img src="<?= $imgSrc ?>" alt="" style="width:44px;height:36px;object-fit:cover;border-radius:4px;flex-shrink:0;border:1px solid var(--admin-border);">
-                    <?php endif; ?>
-                    <div>
-                        <div class="admin-card-title" style="font-size:0.85rem;margin-bottom:0;"><?= htmlspecialchars($sc['Title']) ?></div>
-                        <span class="admin-table-sub">ID #<?= (int) $sc['ProjectShowcaseID'] ?></span>
-                    </div>
-                </div>
-            </td>
-            <td style="max-width:260px;">
-                <span class="admin-table-sub" style="line-height:1.5;">
-                    <?= htmlspecialchars(strlen($sc['Summary'] ?? '') > 90 ? substr($sc['Summary'], 0, 90) . '…' : ($sc['Summary'] ?? '—')) ?>
-                </span>
-            </td>
-            <td><?= $sc['StartDate'] ? date('M d, Y', strtotime($sc['StartDate'])) : '—' ?></td>
-            <td><?= $sc['EndDate']   ? date('M d, Y', strtotime($sc['EndDate']))   : '—' ?></td>
-            <td><span class="admin-badge <?= $scBadge ?>"><?= htmlspecialchars($sc['Status']) ?></span></td>
-            <td>
-                <form method="POST" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;">
-                    <input type="hidden" name="showcase_id" value="<?= (int) $sc['ProjectShowcaseID'] ?>">
-                    <select name="showcase_status" style="font-size:0.78rem;padding:5px 8px;border:1px solid var(--admin-border);border-radius:4px;">
-                        <?php foreach (['Ongoing','On Hold','Completed','Cancelled'] as $s): ?>
-                            <option value="<?= $s ?>" <?= $sc['Status'] === $s ? 'selected' : '' ?>><?= $s ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <input type="date" name="showcase_end_date"
-                           value="<?= htmlspecialchars($sc['EndDate'] ?? '') ?>"
-                           style="font-size:0.78rem;padding:5px 8px;border:1px solid var(--admin-border);border-radius:4px;">
-                    <button type="submit" name="update_showcase" class="admin-btn admin-btn-primary admin-btn-sm">Save</button>
-                </form>
-            </td>
-        </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table>
-</div>
-<?php endif; ?>
-
-<hr class="admin-divider" style="margin-bottom:32px;">
-
-<!-- ══════════════════════════════════════════════════════════
-     SECTION 2 — ACTIVE PROJECTS (Ongoing, internal)
+     SECTION 1 — ACTIVE PROJECTS (Ongoing — website + internal)
      ══════════════════════════════════════════════════════════ -->
 <div style="margin-bottom:8px;">
     <h2 class="admin-page-title" style="font-size:1rem;margin-bottom:4px;">
@@ -238,23 +168,28 @@ include("../includes/manager/layout_start.php");
             Active Projects
         </span>
     </h2>
-    <p class="admin-page-sub" style="margin-bottom:16px;">Currently ongoing internal project sites.</p>
+    <p class="admin-page-sub" style="margin-bottom:16px;">All currently ongoing projects — both website showcase and internal site records.</p>
 </div>
 
 <?php if (count($activeRows) === 0): ?>
     <div class="admin-alert admin-alert-info" style="margin-bottom:32px;">No ongoing projects at the moment.</div>
 <?php else: ?>
     <div class="admin-card-grid" style="margin-bottom:40px;">
-        <?php foreach ($activeRows as $project):
-            $status        = managerProjectStatusLabel($project['ProjectStatus']);
-            $updatesResult = mysqli_query($conn,
-                "SELECT pu.*, e.Username FROM Project_Update pu
-                 LEFT JOIN Employee e ON pu.EmployeeID = e.EmployeeID
-                 WHERE pu.ProjectID = " . (int) $project['ProjectID'] . "
-                 ORDER BY pu.UpdateDate DESC LIMIT 4"
-            );
-        ?>
-            <?php include __DIR__ . '/../includes/manager/_project_card.php'; ?>
+        <?php foreach ($activeRows as $project): ?>
+            <?php if ($project['_source'] === 'showcase'): ?>
+                <?php include __DIR__ . '/../includes/manager/_showcase_card.php'; ?>
+            <?php else: ?>
+                <?php
+                $status        = managerProjectStatusLabel($project['ProjectStatus']);
+                $updatesResult = mysqli_query($conn,
+                    "SELECT pu.*, e.Username FROM Project_Update pu
+                     LEFT JOIN Employee e ON pu.EmployeeID = e.EmployeeID
+                     WHERE pu.ProjectID = " . (int) $project['ProjectID'] . "
+                     ORDER BY pu.UpdateDate DESC LIMIT 4"
+                );
+                ?>
+                <?php include __DIR__ . '/../includes/manager/_project_card.php'; ?>
+            <?php endif; ?>
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
@@ -262,27 +197,32 @@ include("../includes/manager/layout_start.php");
 <hr class="admin-divider" style="margin-bottom:32px;">
 
 <!-- ══════════════════════════════════════════════════════════
-     SECTION 3 — ALL INTERNAL PROJECTS
+     SECTION 2 — ALL PROJECTS (non-ongoing — website + internal)
      ══════════════════════════════════════════════════════════ -->
 <div style="margin-bottom:8px;">
     <h2 class="admin-page-title" style="font-size:1rem;margin-bottom:4px;">All Projects</h2>
-    <p class="admin-page-sub" style="margin-bottom:16px;">Complete history of all internal project records across every status.</p>
+    <p class="admin-page-sub" style="margin-bottom:16px;">Complete history of all project records across every status.</p>
 </div>
 
 <?php if (count($allRows) === 0): ?>
     <div class="admin-alert admin-alert-info">No projects found. Use the <strong>+ Add Project</strong> button to create one from an approved application.</div>
 <?php else: ?>
     <div class="admin-card-grid">
-        <?php foreach ($allRows as $project):
-            $status        = managerProjectStatusLabel($project['ProjectStatus']);
-            $updatesResult = mysqli_query($conn,
-                "SELECT pu.*, e.Username FROM Project_Update pu
-                 LEFT JOIN Employee e ON pu.EmployeeID = e.EmployeeID
-                 WHERE pu.ProjectID = " . (int) $project['ProjectID'] . "
-                 ORDER BY pu.UpdateDate DESC LIMIT 4"
-            );
-        ?>
-            <?php include __DIR__ . '/../includes/manager/_project_card.php'; ?>
+        <?php foreach ($allRows as $project): ?>
+            <?php if ($project['_source'] === 'showcase'): ?>
+                <?php include __DIR__ . '/../includes/manager/_showcase_card.php'; ?>
+            <?php else: ?>
+                <?php
+                $status        = managerProjectStatusLabel($project['ProjectStatus']);
+                $updatesResult = mysqli_query($conn,
+                    "SELECT pu.*, e.Username FROM Project_Update pu
+                     LEFT JOIN Employee e ON pu.EmployeeID = e.EmployeeID
+                     WHERE pu.ProjectID = " . (int) $project['ProjectID'] . "
+                     ORDER BY pu.UpdateDate DESC LIMIT 4"
+                );
+                ?>
+                <?php include __DIR__ . '/../includes/manager/_project_card.php'; ?>
+            <?php endif; ?>
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
