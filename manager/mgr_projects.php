@@ -11,6 +11,24 @@ $employeeId        = (int) $_SESSION['user_id'];
 $successMsg = '';
 $errorMsg   = '';
 
+// ── UNPUBLISH FROM WEBSITE ──────────────────────────────────
+if (isset($_POST['unpublish_from_website'], $_POST['showcase_id'], $_POST['project_id'])) {
+    $scDel  = (int) $_POST['showcase_id'];
+    $projId = (int) $_POST['project_id'];
+    if ($scDel > 0) {
+        mysqli_query($conn, "DELETE FROM ProjectShowcase WHERE ProjectShowcaseID = {$scDel}");
+
+        // Notify client
+        $unpubMsg = mysqli_real_escape_string($conn,
+            "This project has been removed from the public website showcase.");
+        mysqli_query($conn,
+            "INSERT INTO Project_Update (ProjectID, EmployeeID, Status, Description, UpdateDate)
+             VALUES ({$projId}, {$employeeId}, 'Reviewed', '{$unpubMsg}', CURDATE())"
+        );
+        $successMsg = "Project removed from the website.";
+    }
+}
+
 // ── PUBLISH PROJECT TO WEBSITE ──────────────────────────────
 if (isset($_POST['publish_to_website'], $_POST['project_id'])) {
     $pubId      = (int) $_POST['project_id'];

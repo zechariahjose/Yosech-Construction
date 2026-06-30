@@ -17,6 +17,15 @@ $alreadyStarted = (bool) mysqli_fetch_assoc(mysqli_query($conn,
      WHERE ProjectID = {$pId} AND Description LIKE '%marked as started%'
      LIMIT 1"
 ));
+
+// Check if project has already been published to the website
+$publishedRow = mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT ProjectShowcaseID, Title FROM ProjectShowcase
+     WHERE Title = '" . mysqli_real_escape_string($conn, $project['ProjectTitle'] ?? '') . "'
+     LIMIT 1"
+));
+$alreadyPublished  = !empty($publishedRow);
+$publishedShowcaseId = $alreadyPublished ? (int)$publishedRow['ProjectShowcaseID'] : null;
 ?>
 <div class="pj-item" id="pjItem_<?= $pId ?>">
 
@@ -196,16 +205,40 @@ $alreadyStarted = (bool) mysqli_fetch_assoc(mysqli_query($conn,
                 <div style="border-top:1px solid var(--admin-border);padding-top:12px;">
                     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
                         <div>
-                            <div class="pj-detail-label" style="margin-bottom:4px;">Publish to Website</div>
-                            <div style="font-size:0.78rem;color:var(--admin-muted);">Add this project to the public showcase. A photo is required.</div>
+                            <div class="pj-detail-label" style="margin-bottom:4px;">Website Showcase</div>
+                            <?php if ($alreadyPublished): ?>
+                                <div style="font-size:0.78rem;color:#059669;font-weight:600;display:flex;align-items:center;gap:5px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                                    Published — visible on the public website.
+                                </div>
+                            <?php else: ?>
+                                <div style="font-size:0.78rem;color:var(--admin-muted);">Add this project to the public showcase. A photo is required.</div>
+                            <?php endif; ?>
                         </div>
-                        <button type="button" class="pj-action-btn"
-                                onclick="pjToggleEl('pubPanel_<?= $pId ?>', this)"
-                                data-label-open="Show Publish Form" data-label-close="Cancel">
-                            Show Publish Form
-                        </button>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <?php if ($alreadyPublished): ?>
+                                <!-- Unpublish -->
+                                <form method="post"
+                                      onsubmit="return confirm('Unpublish this project? It will be removed from the public website. This cannot be undone.');">
+                                    <input type="hidden" name="project_id" value="<?= $pId ?>">
+                                    <input type="hidden" name="showcase_id" value="<?= $publishedShowcaseId ?>">
+                                    <button type="submit" name="unpublish_from_website"
+                                            class="admin-btn admin-btn-danger admin-btn-sm">
+                                        Unpublish from Website
+                                    </button>
+                                </form>
+                            <?php else: ?>
+                                <!-- Show publish form toggle -->
+                                <button type="button" class="pj-action-btn"
+                                        onclick="pjToggleEl('pubPanel_<?= $pId ?>', this)"
+                                        data-label-open="Show Publish Form" data-label-close="Cancel">
+                                    Show Publish Form
+                                </button>
+                            <?php endif; ?>
+                        </div>
                     </div>
 
+                    <?php if (!$alreadyPublished): ?>
                     <div id="pubPanel_<?= $pId ?>" style="display:none;">
                         <form method="POST" enctype="multipart/form-data"
                               style="background:var(--ysc-bg);border:1px solid var(--admin-border);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:12px;">
@@ -255,6 +288,7 @@ $alreadyStarted = (bool) mysqli_fetch_assoc(mysqli_query($conn,
                             </div>
                         </form>
                     </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Delete -->
