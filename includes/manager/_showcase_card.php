@@ -47,11 +47,11 @@ $scImg   = !empty($project['ImageURL'])
     <?php endif; ?>
 
     <!-- Update status + end date -->
-    <form method="POST" class="d-flex gap-2 align-items-end flex-wrap mb-0">
+    <form method="POST" class="d-flex gap-2 align-items-end flex-wrap mb-0 js-track-form">
         <input type="hidden" name="showcase_id" value="<?= (int) $project['ProjectShowcaseID'] ?>">
         <div class="admin-field mb-0 flex-grow-1">
             <label>Status</label>
-            <select name="showcase_status">
+            <select name="showcase_status" data-original="<?= htmlspecialchars($project['Status']) ?>">
                 <?php foreach (['Ongoing', 'On Hold', 'Completed', 'Cancelled'] as $s): ?>
                     <option value="<?= $s ?>" <?= $project['Status'] === $s ? 'selected' : '' ?>><?= $s ?></option>
                 <?php endforeach; ?>
@@ -59,8 +59,10 @@ $scImg   = !empty($project['ImageURL'])
         </div>
         <div class="admin-field mb-0">
             <label>End Date</label>
-            <input type="date" name="showcase_end_date" value="<?= htmlspecialchars($project['EndDate'] ?? '') ?>">
+            <input type="date" name="showcase_end_date"
+                   value="<?= htmlspecialchars($project['EndDate'] ?? '') ?>"
+                   data-original="<?= htmlspecialchars($project['EndDate'] ?? '') ?>">
         </div>
-        <button type="submit" name="update_showcase" class="admin-btn admin-btn-primary admin-btn-sm">Save</button>
+        <button type="submit" name="update_showcase" class="admin-btn admin-btn-primary admin-btn-sm" disabled>Save</button>
     </form>
 </div>

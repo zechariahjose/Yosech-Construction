@@ -19,7 +19,6 @@ if (isset($_POST['update_showcase'], $_POST['showcase_id'])) {
                     ? "'" . mysqli_real_escape_string($conn, $_POST['showcase_end_date']) . "'"
                     : 'NULL';
     mysqli_query($conn, "UPDATE ProjectShowcase SET Status='{$scStatus}', EndDate={$scEnd} WHERE ProjectShowcaseID={$scID}");
-    $successMsg = "Website project updated.";
 }
 
 // ── DELETE PROJECT ──────────────────────────────────────────
@@ -317,5 +316,54 @@ include("../includes/manager/layout_start.php");
         </form>
     </div>
 </div>
+
+<style>
+.admin-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+</style>
+
+<script>
+(function () {
+    // ── Track-form: select / date inputs ─────────────────────
+    // Activates the submit button only when any tracked field differs from its original value.
+    document.querySelectorAll('.js-track-form').forEach(function (form) {
+        var btn     = form.querySelector('button[type="submit"], button:not([type="button"])');
+        var tracked = form.querySelectorAll('[data-original]');
+        if (!btn || !tracked.length) return;
+
+        function check() {
+            var changed = Array.from(tracked).some(function (el) {
+                return el.value !== el.dataset.original;
+            });
+            btn.disabled = !changed;
+        }
+
+        tracked.forEach(function (el) {
+            el.addEventListener('change', check);
+            el.addEventListener('input',  check);
+        });
+
+        check(); // initialise
+    });
+
+    // ── Post-update forms: textarea ───────────────────────────
+    // Activates the submit button only when the textarea has non-empty text.
+    document.querySelectorAll('.js-post-update-form').forEach(function (form) {
+        var btn      = form.querySelector('button[type="submit"], button:not([type="button"])');
+        var textarea = form.querySelector('textarea');
+        if (!btn || !textarea) return;
+
+        function check() {
+            btn.disabled = textarea.value.trim() === '';
+        }
+
+        textarea.addEventListener('input', check);
+        check(); // initialise
+    });
+})();
+</script>
 
 <?php include("../includes/manager/layout_end.php"); ?>

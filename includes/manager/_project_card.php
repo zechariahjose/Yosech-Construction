@@ -20,17 +20,17 @@
     </div>
 
     <!-- Update Status -->
-    <form method="post" class="d-flex gap-2 align-items-end mb-0">
+    <form method="post" class="d-flex gap-2 align-items-end mb-0 js-track-form">
         <input type="hidden" name="project_id" value="<?= (int) $project['ProjectID'] ?>">
         <div class="admin-field mb-0 flex-grow-1">
             <label>Site Status</label>
-            <select name="project_status">
+            <select name="project_status" data-original="<?= htmlspecialchars($project['ProjectStatus']) ?>">
                 <?php foreach (['Ongoing', 'On Hold', 'Completed', 'Cancelled'] as $s): ?>
                     <option value="<?= $s ?>" <?= $project['ProjectStatus'] === $s ? 'selected' : '' ?>><?= $s ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
-        <button class="admin-btn admin-btn-primary admin-btn-sm">Update Status</button>
+        <button class="admin-btn admin-btn-primary admin-btn-sm" disabled>Update Status</button>
     </form>
 
     <hr class="admin-divider">
@@ -62,7 +62,7 @@
         </ul>
     <?php endif; ?>
 
-    <form method="post">
+    <form method="post" class="js-post-update-form">
         <input type="hidden" name="project_id" value="<?= (int) $project['ProjectID'] ?>">
         <input type="hidden" name="add_update" value="1">
         <div class="admin-field">
@@ -75,7 +75,7 @@
                 <option value="Pending">Pending Inspection</option>
                 <option value="Approved">Approved</option>
             </select>
-            <button class="admin-btn admin-btn-primary admin-btn-sm">Post Update</button>
+            <button class="admin-btn admin-btn-primary admin-btn-sm" disabled>Post Update</button>
         </div>
     </form>
 
