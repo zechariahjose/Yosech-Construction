@@ -10,6 +10,7 @@ $employeeId        = (int) $_SESSION['user_id'];
 
 $successMsg = '';
 $errorMsg   = '';
+$reopenAddModal = false;
 
 // ── UNPUBLISH FROM WEBSITE ──────────────────────────────────
 if (isset($_POST['unpublish_from_website'], $_POST['showcase_id'], $_POST['project_id'])) {
@@ -215,30 +216,50 @@ if (isset($_POST['delete_project'], $_POST['project_id'])) {
 // ── ADD PROJECT ─────────────────────────────────────────────
 if (isset($_POST['add_project'])) {
     $appID          = (int) $_POST['application_id'];
-    $proposalDate   = $_POST['proposal_date']   ?: null;
-    $proposalBudget = $_POST['proposal_budget'] ?: null;
+    $proposalDate   = !empty($_POST['proposal_date'])   ? $_POST['proposal_date']   : null;
+    $proposalBudget = !empty($_POST['proposal_budget']) ? (float) $_POST['proposal_budget'] : null;
     $proposalStatus = $_POST['proposal_status'];
-    $startDate      = $_POST['start_date']  ?: null;
-    $endDate        = $_POST['end_date']    ?: null;
+    $startDate      = !empty($_POST['start_date'])  ? $_POST['start_date']  : null;
+    $endDate        = !empty($_POST['end_date'])    ? $_POST['end_date']    : null;
     $description    = trim($_POST['description']);
     $paymentStatus  = $_POST['payment_status'];
     $projectStatus  = $_POST['project_status'];
 
-    $chk = mysqli_prepare($conn, "SELECT ProjectID FROM Project WHERE ApplicationID = ?");
-    mysqli_stmt_bind_param($chk, "i", $appID);
-    mysqli_stmt_execute($chk);
-    mysqli_stmt_store_result($chk);
-
-    if (mysqli_stmt_num_rows($chk) > 0) {
-        $errorMsg = "This application already has a linked project.";
+    // Validation
+    if ($appID <= 0) {
+        $errorMsg = "Please select an approved application.";
+    } elseif ($startDate && $endDate && $endDate < $startDate) {
+        $errorMsg = "End date cannot be before start date.";
     } else {
-        $ins = mysqli_prepare($conn, "INSERT INTO Project (ApplicationID, ProposalDate, ProposalBudget, ProposalStatus, StartDate, EndDate, ProjectStatus, Description, ProjectPaymentStatus) VALUES (?,?,?,?,?,?,?,?,?)");
-        mysqli_stmt_bind_param($ins, "idsssssss", $appID, $proposalDate, $proposalBudget, $proposalStatus, $startDate, $endDate, $projectStatus, $description, $paymentStatus);
-        if (mysqli_stmt_execute($ins)) {
-            $successMsg = "Project created successfully.";
+        $chk = mysqli_prepare($conn, "SELECT ProjectID FROM Project WHERE ApplicationID = ?");
+        mysqli_stmt_bind_param($chk, "i", $appID);
+        mysqli_stmt_execute($chk);
+        mysqli_stmt_store_result($chk);
+
+        if (mysqli_stmt_num_rows($chk) > 0) {
+            $errorMsg = "This application already has a linked project.";
         } else {
-            $errorMsg = "Failed to create project: " . mysqli_error($conn);
+            $ins = mysqli_prepare($conn,
+                "INSERT INTO Project
+                 (ApplicationID, ProposalDate, ProposalBudget, ProposalStatus,
+                  StartDate, EndDate, ProjectStatus, Description, ProjectPaymentStatus)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            );
+            mysqli_stmt_bind_param($ins, "idsssssss",
+                $appID, $proposalDate, $proposalBudget, $proposalStatus,
+                $startDate, $endDate, $projectStatus, $description, $paymentStatus
+            );
+            if (mysqli_stmt_execute($ins)) {
+                $successMsg = "Project created successfully.";
+            } else {
+                $errorMsg = "Failed to create project: " . mysqli_error($conn);
+            }
         }
+    }
+
+    // Keep modal open on error
+    if ($errorMsg) {
+        $reopenAddModal = true;
     }
 }
 
@@ -327,6 +348,22 @@ while ($row = mysqli_fetch_assoc($internalRestResult)) {
 $activeRows = array_merge($showcaseActive, $internalActiveRows);
 $allRows    = array_merge($showcaseRest, $internalRestRows);
 
+// ── PRE-FETCH APPROVED APPS WITHOUT A PROJECT (for modal) ──
+$appsForModal = mysqli_query($conn,
+    "SELECT a.ApplicationID, a.ProjectTitle, a.ApplicationType, a.ProjectLocation,
+            a.ProposalBudget, a.ProjectStartDate, a.ProjectEndDate,
+            c.Client_FirstName, c.Client_LastName
+     FROM Application a
+     JOIN Client c ON a.UserID = c.UserID
+     LEFT JOIN Project p ON p.ApplicationID = a.ApplicationID
+     WHERE a.Status = 'Approved' AND p.ProjectID IS NULL
+     ORDER BY a.ApplicationID DESC"
+);
+$appsForModalRows = [];
+while ($row = mysqli_fetch_assoc($appsForModal)) {
+    $appsForModalRows[] = $row;
+}
+
 $mgrActiveNav    = 'projects';
 $mgrPageTitle    = 'Projects';
 $mgrPageSubtitle = 'Manage website showcase projects and track internal site progress.';
@@ -414,95 +451,161 @@ include("../includes/manager/layout_start.php");
 <?php endif; ?>
 
 <!-- ── ADD PROJECT MODAL ─────────────────────────────────── -->
-<div id="addProjectModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;">
-    <div style="background:#fff;border-radius:10px;padding:32px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;position:relative;">
-        <button onclick="document.getElementById('addProjectModal').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:#6b7280;">✕</button>
-        <h2 class="admin-page-title" style="font-size:1.1rem;margin-bottom:4px;">Add New Project</h2>
-        <p class="admin-page-sub" style="margin-bottom:20px;">Select an approved application and fill in project details.</p>
+<div id="addProjectModal"
+     style="display:<?= !empty($reopenAddModal) ? 'flex' : 'none' ?>;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;padding:16px;"
+     onclick="if(event.target===this)this.style.display='none'">
+    <div style="background:#fff;border-radius:12px;width:100%;max-width:600px;max-height:92vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
 
-        <form method="POST">
-            <div class="admin-field">
-                <label>Approved Application <span style="color:red">*</span></label>
-                <select name="application_id" required>
-                    <option value="">— Select Application —</option>
-                    <?php
-                    $appsForModal = mysqli_query($conn,
-                        "SELECT a.ApplicationID, a.ProjectTitle, a.ApplicationType, a.ProjectLocation,
-                                c.Client_FirstName, c.Client_LastName
-                         FROM Application a
-                         JOIN Client c ON a.UserID = c.UserID
-                         LEFT JOIN Project p ON p.ApplicationID = a.ApplicationID
-                         WHERE a.Status = 'Approved' AND p.ProjectID IS NULL
-                         ORDER BY a.ApplicationID DESC"
-                    );
-                    while ($app = mysqli_fetch_assoc($appsForModal)):
-                        $label  = $app['ProjectTitle'] ?: $app['ApplicationType'];
-                        $label .= ' — ' . $app['Client_FirstName'] . ' ' . $app['Client_LastName'];
-                        if ($app['ProjectLocation']) $label .= ' (' . $app['ProjectLocation'] . ')';
-                    ?>
-                        <option value="<?= (int) $app['ApplicationID'] ?>"><?= htmlspecialchars($label) ?></option>
-                    <?php endwhile; ?>
-                </select>
+        <!-- Modal header -->
+        <div style="padding:24px 28px 18px;border-bottom:1px solid var(--admin-border);display:flex;align-items:flex-start;justify-content:space-between;gap:16px;position:sticky;top:0;background:#fff;z-index:1;">
+            <div>
+                <div style="font-size:1rem;font-weight:800;color:var(--admin-text);margin-bottom:3px;">Create New Project</div>
+                <div style="font-size:0.78rem;color:var(--admin-muted);">Link an approved application to a new project record.</div>
             </div>
+            <button type="button" onclick="document.getElementById('addProjectModal').style.display='none'"
+                    style="width:32px;height:32px;border-radius:6px;border:1px solid var(--admin-border);background:var(--ysc-bg);color:var(--admin-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">
+                ✕
+            </button>
+        </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <!-- Form body -->
+        <div style="padding:24px 28px;">
+            <form method="POST" id="addProjectForm">
+
+                <!-- Application selector -->
                 <div class="admin-field">
-                    <label>Proposal Date</label>
-                    <input type="date" name="proposal_date">
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+                        Approved Application <span style="color:#dc2626;">*</span>
+                    </label>
+                    <?php if (empty($appsForModalRows)): ?>
+                        <div style="padding:12px;background:var(--ysc-bg);border:1px solid var(--admin-border);border-radius:6px;font-size:0.84rem;color:var(--admin-muted);">
+                            No approved applications available. Applications must be approved before creating a project.
+                        </div>
+                    <?php else: ?>
+                        <select name="application_id" id="appSelect" required onchange="autofillFromApp(this)">
+                            <option value="">— Select an approved application —</option>
+                            <?php foreach ($appsForModalRows as $app):
+                                $label  = $app['ProjectTitle'] ?: $app['ApplicationType'];
+                                $label .= ' — ' . $app['Client_FirstName'] . ' ' . $app['Client_LastName'];
+                                if ($app['ProjectLocation']) $label .= ' (' . $app['ProjectLocation'] . ')';
+                                $selected = isset($_POST['application_id']) && (int)$_POST['application_id'] === (int)$app['ApplicationID'] ? 'selected' : '';
+                            ?>
+                                <option value="<?= (int)$app['ApplicationID'] ?>"
+                                    data-budget="<?= htmlspecialchars($app['ProposalBudget'] ?? '') ?>"
+                                    data-start="<?= htmlspecialchars($app['ProjectStartDate'] ?? '') ?>"
+                                    data-end="<?= htmlspecialchars($app['ProjectEndDate'] ?? '') ?>"
+                                    <?= $selected ?>>
+                                    <?= htmlspecialchars($label) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div style="font-size:0.72rem;color:var(--admin-muted);margin-top:4px;">Selecting an application will auto-fill budget and dates from the client's proposal.</div>
+                    <?php endif; ?>
                 </div>
+
+                <div style="height:1px;background:var(--admin-border);margin:16px 0;"></div>
+
+                <!-- Dates -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                    <div class="admin-field">
+                        <label>Start Date</label>
+                        <input type="date" name="start_date" id="addStartDate"
+                               value="<?= htmlspecialchars($_POST['start_date'] ?? '') ?>">
+                    </div>
+                    <div class="admin-field">
+                        <label>End Date</label>
+                        <input type="date" name="end_date" id="addEndDate"
+                               value="<?= htmlspecialchars($_POST['end_date'] ?? '') ?>">
+                    </div>
+                    <div class="admin-field">
+                        <label>Project Status</label>
+                        <select name="project_status">
+                            <?php foreach (['Ongoing','On Hold','Completed','Cancelled'] as $s): ?>
+                                <option value="<?= $s ?>" <?= ($_POST['project_status'] ?? 'Ongoing')===$s?'selected':'' ?>><?= $s ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="admin-field">
+                        <label>Payment Status</label>
+                        <select name="payment_status">
+                            <?php foreach (['Unpaid','Partial','Paid'] as $ps): ?>
+                                <option value="<?= $ps ?>" <?= ($_POST['payment_status'] ?? 'Unpaid')===$ps?'selected':'' ?>><?= $ps ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Budget -->
                 <div class="admin-field">
                     <label>Proposed Budget (₱)</label>
-                    <input type="number" name="proposal_budget" step="0.01" min="0" placeholder="0.00">
+                    <div style="position:relative;">
+                        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--admin-muted);font-size:0.86rem;">₱</span>
+                        <input type="number" name="proposal_budget" id="addBudget"
+                               step="0.01" min="0" placeholder="0.00"
+                               value="<?= htmlspecialchars($_POST['proposal_budget'] ?? '') ?>"
+                               style="padding-left:28px;">
+                    </div>
                 </div>
-                <div class="admin-field">
-                    <label>Proposal Status</label>
-                    <select name="proposal_status">
-                        <option value="Draft">Draft</option>
-                        <option value="Submitted">Submitted</option>
-                        <option value="Approved" selected>Approved</option>
-                        <option value="Rejected">Rejected</option>
-                    </select>
-                </div>
-                <div class="admin-field">
-                    <label>Project Status</label>
-                    <select name="project_status">
-                        <option value="Ongoing">Ongoing</option>
-                        <option value="On Hold">On Hold</option>
-                        <option value="Completed">Completed</option>
-                        <option value="Cancelled">Cancelled</option>
-                    </select>
-                </div>
-                <div class="admin-field">
-                    <label>Start Date</label>
-                    <input type="date" name="start_date">
-                </div>
-                <div class="admin-field">
-                    <label>End Date</label>
-                    <input type="date" name="end_date">
-                </div>
-            </div>
 
-            <div class="admin-field">
-                <label>Payment Status</label>
-                <select name="payment_status">
-                    <option value="Unpaid">Unpaid</option>
-                    <option value="Partial">Partial</option>
-                    <option value="Paid">Paid</option>
-                </select>
-            </div>
+                <!-- Description -->
+                <div class="admin-field">
+                    <label>Description / Scope of Work</label>
+                    <textarea name="description" rows="4"
+                              placeholder="Describe the project scope, deliverables, and key milestones…"><?= htmlspecialchars($_POST['description'] ?? '') ?></textarea>
+                </div>
 
-            <div class="admin-field">
-                <label>Description / Scope of Work</label>
-                <textarea name="description" rows="3" placeholder="Describe the project scope..."></textarea>
-            </div>
+                <!-- Proposal fields (collapsible) -->
+                <details style="margin-bottom:14px;">
+                    <summary style="font-size:0.75rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--admin-muted);cursor:pointer;user-select:none;padding:8px 0;">
+                        Proposal Details (optional)
+                    </summary>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px;padding-top:12px;border-top:1px solid var(--ysc-border-light);">
+                        <div class="admin-field">
+                            <label>Proposal Date</label>
+                            <input type="date" name="proposal_date"
+                                   value="<?= htmlspecialchars($_POST['proposal_date'] ?? '') ?>">
+                        </div>
+                        <div class="admin-field">
+                            <label>Proposal Status</label>
+                            <select name="proposal_status">
+                                <?php foreach (['Draft','Submitted','Approved','Rejected'] as $ps): ?>
+                                    <option value="<?= $ps ?>" <?= ($_POST['proposal_status'] ?? 'Approved')===$ps?'selected':'' ?>><?= $ps ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                </details>
 
-            <div class="d-flex gap-2 justify-content-end mt-2">
-                <button type="button" class="admin-btn admin-btn-outline" onclick="document.getElementById('addProjectModal').style.display='none'">Cancel</button>
-                <button type="submit" name="add_project" class="admin-btn admin-btn-primary">Create Project</button>
-            </div>
-        </form>
+                <!-- Footer -->
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding-top:16px;border-top:1px solid var(--admin-border);">
+                    <button type="button" class="admin-btn admin-btn-outline"
+                            onclick="document.getElementById('addProjectModal').style.display='none'">Cancel</button>
+                    <button type="submit" name="add_project" class="admin-btn admin-btn-primary"
+                            <?= empty($appsForModalRows) ? 'disabled' : '' ?>>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                        Create Project
+                    </button>
+                </div>
+
+            </form>
+        </div>
     </div>
 </div>
+
+<script>
+// Auto-fill budget and dates from selected application
+function autofillFromApp(sel) {
+    var opt = sel.options[sel.selectedIndex];
+    if (!opt || !opt.value) return;
+    var budget = document.getElementById('addBudget');
+    var start  = document.getElementById('addStartDate');
+    var end    = document.getElementById('addEndDate');
+    if (budget && opt.dataset.budget) budget.value = opt.dataset.budget;
+    if (start  && opt.dataset.start)  start.value  = opt.dataset.start;
+    if (end    && opt.dataset.end)    end.value    = opt.dataset.end;
+}
+</script>
 
 <style>
 /* ════════════════════════════════════════════════
