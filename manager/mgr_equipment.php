@@ -59,9 +59,9 @@ if (isset($_POST['add_equipment'])) {
             // Insert into EquipmentOffering (drives public website)
             mysqli_query($conn,
                 "INSERT INTO EquipmentOffering
-                 (Name, Model, Description, Specs, HourlyRate, DailyRate, WeeklyRate, MonthlyRate, AvailabilityStatus, ImageURL)
+                 (Name, Model, Description, Specs, HourlyRate, DailyRate, WeeklyRate, MonthlyRate, AvailabilityStatus, ImageURL, DateAdded)
                  VALUES ('{$eName}', '{$eModel}', '{$eDesc}', '{$eSpecs}',
-                         {$hourly}, {$daily}, {$weekly}, {$monthly}, '{$eStatus}', {$eImg})"
+                         {$hourly}, {$daily}, {$weekly}, {$monthly}, '{$eStatus}', {$eImg}, NOW())"
             );
             $newEoId = (int) mysqli_insert_id($conn);
 
