@@ -14,13 +14,18 @@ $applications = mysqli_query(
     $conn,
     "SELECT a.ApplicationID, a.ApplicationType, a.ProjectTitle, a.ProjectLocation,
             a.ProposalBudget, a.ProjectStartDate, a.ProjectEndDate,
+            a.RentalStartDate, a.RentalEndDate, a.NeedsOperator,
             a.Description AS ApplicationDescription,
             a.SubmissionDate, a.Status AS ApplicationStatus,
             p.ProjectID, p.ProjectStatus, p.ProjectPaymentStatus,
             p.StartDate, p.EndDate, p.Description AS ProjectDescription,
-            p.ProposalBudget AS ApprovedBudget
+            p.ProposalBudget AS ApprovedBudget,
+            eo.Name AS EquipmentName, eo.Model AS EquipmentModel,
+            eo.DailyRate, eo.WeeklyRate
      FROM Application a
      LEFT JOIN Project p ON a.ApplicationID = p.ApplicationID
+     LEFT JOIN Equipment e ON a.EquipmentID = e.EquipmentID
+     LEFT JOIN EquipmentOffering eo ON e.EquipmentOfferingID = eo.EquipmentOfferingID
      WHERE a.UserID = {$userId}
      ORDER BY a.SubmissionDate DESC"
 );
@@ -30,8 +35,8 @@ $applications = mysqli_query(
 
 <div class="container">
     <div class="ysc-page-header">
-        <h1 class="ysc-page-title">My Projects</h1>
-        <p class="ysc-page-sub">Track your applications and view project updates after approval.</p>
+        <h1 class="ysc-page-title">My Applications</h1>
+        <p class="ysc-page-sub">Track your project proposals and equipment rental requests.</p>
     </div>
 
     <?php if (mysqli_num_rows($applications) === 0): ?>
@@ -56,9 +61,17 @@ $applications = mysqli_query(
         }
     }
 
-    // Display name: use ProjectTitle if available, fallback to ApplicationType
-    $displayName = !empty($row['ProjectTitle']) ? $row['ProjectTitle'] : $row['ApplicationType'];
-    $isProject   = $row['ApplicationType'] === 'New Project';
+    // Display name: use ProjectTitle if available, fallback to equipment name, then type
+    $isProject = $row['ApplicationType'] === 'New Project';
+    $isRental  = $row['ApplicationType'] === 'Equipment Rental';
+
+    if ($isRental && !empty($row['EquipmentName'])) {
+        $displayName = $row['EquipmentName'] . (!empty($row['EquipmentModel']) ? ' (' . $row['EquipmentModel'] . ')' : '');
+    } elseif (!empty($row['ProjectTitle'])) {
+        $displayName = $row['ProjectTitle'];
+    } else {
+        $displayName = $row['ApplicationType'];
+    }
     ?>
         <div class="home-panel mb-4">
             <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
@@ -78,14 +91,53 @@ $applications = mysqli_query(
             </div>
 
             <?php if ($row['ApplicationStatus'] === 'Pending'): ?>
-                <div class="home-info-note">Your application is under review. Project updates will appear here once approved.</div>
+                <div class="home-info-note">Your application is under review. Updates will appear here once approved.</div>
 
             <?php elseif ($row['ApplicationStatus'] === 'Rejected'): ?>
                 <div class="home-info-note home-info-note-muted">This application was not approved. You may submit a new application if needed.</div>
 
-            <?php elseif ($row['ProjectID']): ?>
+            <?php elseif ($isRental && $row['ApplicationStatus'] === 'Approved'): ?>
+                <!-- ── Equipment rental approved ── -->
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-bottom:16px;display:flex;align-items:flex-start;gap:12px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#059669" stroke-width="2" style="flex-shrink:0;margin-top:2px;"><path d="M20 6L9 17l-5-5"/></svg>
+                    <div>
+                        <div style="font-size:0.88rem;font-weight:700;color:#166534;margin-bottom:2px;">Rental Approved</div>
+                        <div style="font-size:0.82rem;color:#166534;">Your equipment rental request has been approved. Please coordinate with our team for deployment details.</div>
+                    </div>
+                </div>
 
-                <!-- Project details -->
+                <div class="row g-3 small">
+                    <?php if (!empty($row['EquipmentName'])): ?>
+                    <div class="col-sm-4">
+                        <span class="text-muted">Equipment</span><br>
+                        <strong><?= htmlspecialchars($row['EquipmentName']) ?></strong>
+                        <?php if (!empty($row['EquipmentModel'])): ?>
+                            <span class="text-muted"> · <?= htmlspecialchars($row['EquipmentModel']) ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
+                    <div class="col-sm-4">
+                        <span class="text-muted">Rental Start</span><br>
+                        <strong><?= htmlspecialchars($row['RentalStartDate'] ?: 'TBD') ?></strong>
+                    </div>
+                    <div class="col-sm-4">
+                        <span class="text-muted">Rental End</span><br>
+                        <strong><?= htmlspecialchars($row['RentalEndDate'] ?: 'TBD') ?></strong>
+                    </div>
+                    <div class="col-sm-4">
+                        <span class="text-muted">Operator</span><br>
+                        <strong><?= !empty($row['NeedsOperator']) ? 'Included' : 'Not required' ?></strong>
+                    </div>
+                    <?php if (!empty($row['DailyRate'])): ?>
+                    <div class="col-sm-4">
+                        <span class="text-muted">Daily Rate</span><br>
+                        <strong>₱<?= number_format((float)$row['DailyRate'], 0) ?></strong>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+            <?php elseif ($row['ProjectID']): ?>
+                <!-- ── Project approved ── -->
                 <div class="row g-3 mb-3 small">
                     <div class="col-sm-3">
                         <span class="text-muted">Project Status</span><br>
