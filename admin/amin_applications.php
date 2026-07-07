@@ -94,9 +94,9 @@ $adminActiveNav    = 'history';
 $adminPageTitle    = 'Application Overview';
 $adminPageSubtitle = 'Business intelligence on client proposals, rental requests, and the approved project pipeline.';
 $adminPageActions  = '
-    <a href="' . BASE_URL . '/admin/amin_export.php?type=applications" class="admin-btn admin-btn-outline">
+    <a href="' . BASE_URL . '/admin/amin_export.php?type=applications_excel" class="admin-btn admin-btn-outline">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Export CSV
+        Export Excel
     </a>
 ';
 
