@@ -7,8 +7,87 @@ managerRequireLogin('manager/mgr_equipment.php');
 $mgrEmployee       = adminCurrentEmployee($conn);
 $mgrPendingRentals = managerPendingRentals($conn);
 
-$successMsg = '';
-$errorMsg   = '';
+$successMsg     = '';
+$errorMsg       = '';
+$reopenAddModal = false;
+
+// ── ADD EQUIPMENT ───────────────────────────────────────────
+if (isset($_POST['add_equipment'])) {
+    $name    = trim($_POST['eq_name']    ?? '');
+    $model   = trim($_POST['eq_model']   ?? '');
+    $desc    = trim($_POST['eq_description'] ?? '');
+    $specs   = trim($_POST['eq_specs']   ?? '');
+    $hourly  = (float) ($_POST['eq_hourly']  ?? 0);
+    $daily   = (float) ($_POST['eq_daily']   ?? 0);
+    $weekly  = (float) ($_POST['eq_weekly']  ?? 0);
+    $monthly = (float) ($_POST['eq_monthly'] ?? 0);
+    $status  = $_POST['eq_availability'] ?? 'Available';
+
+    if ($name === '') {
+        $errorMsg = "Equipment name is required.";
+        $reopenAddModal = true;
+    } else {
+        // Handle photo upload
+        $imgPath = null;
+        if (!empty($_FILES['eq_photo']['name'])) {
+            $uploadDir = dirname(__DIR__) . '/assets/equipment/';
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+            $ext = strtolower(pathinfo($_FILES['eq_photo']['name'], PATHINFO_EXTENSION));
+            if (!in_array($ext, ['jpg','jpeg','png','webp'])) {
+                $errorMsg = "Invalid image format. Use JPG, PNG, or WEBP.";
+                $reopenAddModal = true;
+            } else {
+                $filename = 'eq_' . time() . '_' . preg_replace('/[^a-z0-9]/', '', strtolower($name)) . '.' . $ext;
+                $destAbs  = $uploadDir . $filename;
+                if (move_uploaded_file($_FILES['eq_photo']['tmp_name'], $destAbs)) {
+                    $imgPath = 'assets/equipment/' . $filename;
+                } else {
+                    $errorMsg = "Failed to upload image. Please try again.";
+                    $reopenAddModal = true;
+                }
+            }
+        }
+
+        if (!$errorMsg) {
+            $eName   = mysqli_real_escape_string($conn, $name);
+            $eModel  = mysqli_real_escape_string($conn, $model);
+            $eDesc   = mysqli_real_escape_string($conn, $desc);
+            $eSpecs  = mysqli_real_escape_string($conn, $specs);
+            $eStatus = mysqli_real_escape_string($conn, $status);
+            $eImg    = $imgPath ? "'" . mysqli_real_escape_string($conn, $imgPath) . "'" : 'NULL';
+
+            // Insert into EquipmentOffering (drives public website)
+            mysqli_query($conn,
+                "INSERT INTO EquipmentOffering
+                 (Name, Model, Description, Specs, HourlyRate, DailyRate, WeeklyRate, MonthlyRate, AvailabilityStatus, ImageURL)
+                 VALUES ('{$eName}', '{$eModel}', '{$eDesc}', '{$eSpecs}',
+                         {$hourly}, {$daily}, {$weekly}, {$monthly}, '{$eStatus}', {$eImg})"
+            );
+            $newEoId = (int) mysqli_insert_id($conn);
+
+            if ($newEoId > 0) {
+                // Insert matching Equipment unit
+                $unitStatus = match($status) {
+                    'Available'         => 'Available',
+                    'Under Maintenance' => 'Under Maintenance',
+                    default             => 'Rented',
+                };
+                $specStr = mysqli_real_escape_string($conn,
+                    $name . ($model ? " ({$model})" : '')
+                );
+                mysqli_query($conn,
+                    "INSERT INTO Equipment
+                     (EquipmentOfferingID, Specification, AvailabilityStatus, NeedsOperator, EquipmentPaymentStatus)
+                     VALUES ({$newEoId}, '{$specStr}', '{$unitStatus}', 0, 'Unpaid')"
+                );
+                $successMsg = "Equipment \"{$name}\" added to the catalog.";
+            } else {
+                $errorMsg = "Failed to add equipment. The name may already exist.";
+                $reopenAddModal = true;
+            }
+        }
+    }
+}
 
 // ── EDIT EQUIPMENT DETAILS ──────────────────────────────────
 if (isset($_POST['edit_equipment'], $_POST['equipment_offering_id'])) {
@@ -115,7 +194,8 @@ $mgrActiveNav    = 'equipment';
 $mgrPageTitle    = 'Equipment';
 $mgrPageSubtitle = 'Manage the equipment catalog and track active rental assignments.';
 $mgrPageActions  = '
-    <a href="' . BASE_URL . '/manager/mgr_applications.php?type=rental&status=Pending" class="admin-btn admin-btn-primary">Pending Assignments</a>
+    <a href="' . BASE_URL . '/manager/mgr_applications.php?type=rental&status=Pending" class="admin-btn admin-btn-outline">Pending Assignments</a>
+    <button class="admin-btn admin-btn-primary" onclick="document.getElementById(\'addEquipmentModal\').style.display=\'flex\'">+ Add Equipment</button>
 ';
 
 include("../includes/manager/layout_start.php");
@@ -420,6 +500,124 @@ include("../includes/manager/layout_start.php");
 .text-warning { color: #d97706 !important; font-weight: 600; }
 </style>
 
+<!-- ── ADD EQUIPMENT MODAL ────────────────────────────────── -->
+<div id="addEquipmentModal"
+     style="display:<?= !empty($reopenAddModal) ? 'flex' : 'none' ?>;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;padding:16px;"
+     onclick="if(event.target===this)this.style.display='none'">
+    <div style="background:#fff;border-radius:12px;width:100%;max-width:600px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+
+        <!-- Header -->
+        <div style="padding:22px 28px 16px;border-bottom:1px solid var(--admin-border);display:flex;align-items:flex-start;justify-content:space-between;gap:16px;position:sticky;top:0;background:#fff;z-index:1;">
+            <div>
+                <div style="font-size:1rem;font-weight:800;color:var(--admin-text);margin-bottom:3px;">Add New Equipment</div>
+                <div style="font-size:0.78rem;color:var(--admin-muted);">Adds the item to the catalog and makes it available on the public website.</div>
+            </div>
+            <button type="button" onclick="document.getElementById('addEquipmentModal').style.display='none'"
+                    style="width:32px;height:32px;border-radius:6px;border:1px solid var(--admin-border);background:var(--ysc-bg);color:var(--admin-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">✕</button>
+        </div>
+
+        <!-- Body -->
+        <div style="padding:24px 28px;">
+            <form method="POST" enctype="multipart/form-data">
+
+                <!-- Basic info -->
+                <div style="font-size:0.68rem;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:var(--admin-muted);margin-bottom:12px;">Equipment Information</div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                    <div class="admin-field">
+                        <label>Name <span style="color:#dc2626;">*</span></label>
+                        <input type="text" name="eq_name"
+                               value="<?= htmlspecialchars($_POST['eq_name'] ?? '') ?>"
+                               placeholder="e.g. Backhoe" required>
+                    </div>
+                    <div class="admin-field">
+                        <label>Model</label>
+                        <input type="text" name="eq_model"
+                               value="<?= htmlspecialchars($_POST['eq_model'] ?? '') ?>"
+                               placeholder="e.g. HEV-320">
+                    </div>
+                </div>
+
+                <div class="admin-field">
+                    <label>Description</label>
+                    <textarea name="eq_description" rows="3"
+                              placeholder="Brief description of the equipment and its uses…"><?= htmlspecialchars($_POST['eq_description'] ?? '') ?></textarea>
+                </div>
+
+                <div class="admin-field">
+                    <label>
+                        Specs
+                        <span style="font-size:0.72rem;color:var(--admin-muted);font-weight:400;text-transform:none;letter-spacing:0;"> — separate entries with ·</span>
+                    </label>
+                    <textarea name="eq_specs" rows="2"
+                              placeholder="Bucket capacity: 1.0 m³ · Engine power: 62 kW · Max dig depth: 4.8 m"><?= htmlspecialchars($_POST['eq_specs'] ?? '') ?></textarea>
+                </div>
+
+                <div style="height:1px;background:var(--admin-border);margin:16px 0;"></div>
+
+                <!-- Rates -->
+                <div style="font-size:0.68rem;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:var(--admin-muted);margin-bottom:12px;">Rental Rates (₱)</div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                    <div class="admin-field">
+                        <label>Hourly Rate</label>
+                        <input type="number" name="eq_hourly" step="0.01" min="0" placeholder="0.00"
+                               value="<?= htmlspecialchars($_POST['eq_hourly'] ?? '') ?>">
+                    </div>
+                    <div class="admin-field">
+                        <label>Daily Rate</label>
+                        <input type="number" name="eq_daily" step="0.01" min="0" placeholder="0.00"
+                               value="<?= htmlspecialchars($_POST['eq_daily'] ?? '') ?>">
+                    </div>
+                    <div class="admin-field">
+                        <label>Weekly Rate</label>
+                        <input type="number" name="eq_weekly" step="0.01" min="0" placeholder="0.00"
+                               value="<?= htmlspecialchars($_POST['eq_weekly'] ?? '') ?>">
+                    </div>
+                    <div class="admin-field">
+                        <label>Monthly Rate</label>
+                        <input type="number" name="eq_monthly" step="0.01" min="0" placeholder="0.00"
+                               value="<?= htmlspecialchars($_POST['eq_monthly'] ?? '') ?>">
+                    </div>
+                </div>
+
+                <div style="height:1px;background:var(--admin-border);margin:16px 0;"></div>
+
+                <!-- Photo + status -->
+                <div style="font-size:0.68rem;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:var(--admin-muted);margin-bottom:12px;">Photo &amp; Status</div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                    <div class="admin-field">
+                        <label>Equipment Photo</label>
+                        <input type="file" name="eq_photo" accept="image/jpeg,image/png,image/webp"
+                               style="padding:6px 10px;font-size:0.82rem;">
+                        <div style="font-size:0.72rem;color:var(--admin-muted);margin-top:4px;">JPG, PNG or WEBP. Shown on the website.</div>
+                    </div>
+                    <div class="admin-field">
+                        <label>Availability Status</label>
+                        <select name="eq_availability">
+                            <option value="Available">Available</option>
+                            <option value="Unavailable">Unavailable</option>
+                            <option value="Under Maintenance">Under Maintenance</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding-top:16px;border-top:1px solid var(--admin-border);margin-top:8px;">
+                    <button type="button" class="admin-btn admin-btn-outline"
+                            onclick="document.getElementById('addEquipmentModal').style.display='none'">Cancel</button>
+                    <button type="submit" name="add_equipment" class="admin-btn admin-btn-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                        Add Equipment
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 (function () {
     function bindTrackForm(form) {
@@ -439,10 +637,7 @@ include("../includes/manager/layout_start.php");
         check();
     }
 
-    // Quick availability forms
     document.querySelectorAll('.js-track-form').forEach(bindTrackForm);
-
-    // Edit modal forms
     document.querySelectorAll('.js-edit-modal-form').forEach(bindTrackForm);
 })();
 </script>
