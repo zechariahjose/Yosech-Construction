@@ -370,9 +370,38 @@ include("../includes/manager/layout_start.php");
                 </div>
 
                 <div class="admin-field">
-                    <label>Specs <span class="admin-table-sub" style="text-transform:none;letter-spacing:0;">(separate entries with ·)</span></label>
-                    <textarea name="edit_specs" rows="3"
-                              data-original="<?= htmlspecialchars($eq['Specs'] ?? '') ?>"><?= htmlspecialchars($eq['Specs'] ?? '') ?></textarea>
+                    <label>Specs <span class="admin-table-sub" style="text-transform:none;letter-spacing:0;">(label / value pairs)</span></label>
+                    <?php
+                    // Parse existing specs into rows
+                    $existingSpecs = [];
+                    if (!empty($eq['Specs'])) {
+                        foreach (array_filter(array_map('trim', explode('·', $eq['Specs']))) as $entry) {
+                            $parts = explode(':', $entry, 2);
+                            $existingSpecs[] = [
+                                'label' => trim($parts[0] ?? ''),
+                                'value' => trim($parts[1] ?? ''),
+                            ];
+                        }
+                    }
+                    ?>
+                    <div id="editSpecRows_<?= (int)$eq['EquipmentOfferingID'] ?>" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;">
+                        <?php foreach ($existingSpecs as $sp): ?>
+                        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;">
+                            <input type="text" class="spec-label" placeholder="Label (e.g. Load capacity)"
+                                   value="<?= htmlspecialchars($sp['label']) ?>"
+                                   style="padding:7px 10px;border:1px solid var(--admin-border);border-radius:6px;font-size:0.82rem;font-family:inherit;">
+                            <input type="text" class="spec-value" placeholder="Value (e.g. 18 tons)"
+                                   value="<?= htmlspecialchars($sp['value']) ?>"
+                                   style="padding:7px 10px;border:1px solid var(--admin-border);border-radius:6px;font-size:0.82rem;font-family:inherit;">
+                            <button type="button" onclick="this.closest('div').remove()"
+                                    style="width:30px;height:30px;border-radius:6px;border:1px solid #fecaca;background:#fee2e2;color:#dc2626;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">×</button>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <button type="button" class="admin-btn admin-btn-outline admin-btn-sm"
+                            onclick="addSpecRow('editSpecRows_<?= (int)$eq['EquipmentOfferingID'] ?>')">+ Add Spec</button>
+                    <input type="hidden" name="edit_specs" id="editSpecsHidden_<?= (int)$eq['EquipmentOfferingID'] ?>"
+                           data-original="<?= htmlspecialchars($eq['Specs'] ?? '') ?>">
                 </div>
 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -547,10 +576,14 @@ include("../includes/manager/layout_start.php");
                 <div class="admin-field">
                     <label>
                         Specs
-                        <span style="font-size:0.72rem;color:var(--admin-muted);font-weight:400;text-transform:none;letter-spacing:0;"> — separate entries with ·</span>
+                        <span style="font-size:0.72rem;color:var(--admin-muted);font-weight:400;text-transform:none;letter-spacing:0;"> — add label/value pairs</span>
                     </label>
-                    <textarea name="eq_specs" rows="2"
-                              placeholder="Bucket capacity: 1.0 m³ · Engine power: 62 kW · Max dig depth: 4.8 m"><?= htmlspecialchars($_POST['eq_specs'] ?? '') ?></textarea>
+                    <div id="addSpecRows" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"></div>
+                    <button type="button" class="admin-btn admin-btn-outline admin-btn-sm" onclick="addSpecRow('addSpecRows')">
+                        + Add Spec
+                    </button>
+                    <!-- Hidden field that gets filled before submit -->
+                    <input type="hidden" name="eq_specs" id="addSpecsHidden">
                 </div>
 
                 <div style="height:1px;background:var(--admin-border);margin:16px 0;"></div>
@@ -619,18 +652,66 @@ include("../includes/manager/layout_start.php");
 </div>
 
 <script>
-(function () {
+// ── Spec row builder ─────────────────────────────────────────
+function addSpecRow(containerId) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    var row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;';
+    row.innerHTML =
+        '<input type="text" class="spec-label" placeholder="Label (e.g. Load capacity)"' +
+        ' style="padding:7px 10px;border:1px solid var(--admin-border);border-radius:6px;font-size:0.82rem;font-family:inherit;">' +
+        '<input type="text" class="spec-value" placeholder="Value (e.g. 18 tons)"' +
+        ' style="padding:7px 10px;border:1px solid var(--admin-border);border-radius:6px;font-size:0.82rem;font-family:inherit;">' +
+        '<button type="button" onclick="this.closest(\'div\').remove()"' +
+        ' style="width:30px;height:30px;border-radius:6px;border:1px solid #fecaca;background:#fee2e2;color:#dc2626;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">×</button>';
+    container.appendChild(row);
+}
+
+// Serialise spec rows into "Label: Value · Label: Value" into hidden input
+function serializeSpecs(containerId, hiddenId) {
+    var container = document.getElementById(containerId);
+    var hidden    = document.getElementById(hiddenId);
+    if (!container || !hidden) return;
+    var parts = [];
+    container.querySelectorAll('div').forEach(function(row) {
+        var lbl = (row.querySelector('.spec-label') ? row.querySelector('.spec-label').value : '').trim();
+        var val = (row.querySelector('.spec-value') ? row.querySelector('.spec-value').value : '').trim();
+        if (lbl || val) parts.push(lbl + ': ' + val);
+    });
+    hidden.value = parts.join(' · ');
+}
+
+// Wire up the Add Equipment form — serialize specs on submit
+document.addEventListener('DOMContentLoaded', function() {
+    // Add equipment form
+    var addForm = document.querySelector('#addEquipmentModal form');
+    if (addForm) {
+        addForm.addEventListener('submit', function() {
+            serializeSpecs('addSpecRows', 'addSpecsHidden');
+        });
+    }
+
+    // Edit equipment forms — each has a unique spec container + hidden
+    document.querySelectorAll('.js-edit-modal-form').forEach(function(form) {
+        form.addEventListener('submit', function() {
+            var container = form.querySelector('[id^="editSpecRows_"]');
+            var hidden    = form.querySelector('[id^="editSpecsHidden_"]');
+            if (container && hidden) serializeSpecs(container.id, hidden.id);
+        });
+    });
+
+    // Change-detection for quick-update forms
     function bindTrackForm(form) {
         var btn     = form.querySelector('button[type="submit"]');
         var tracked = form.querySelectorAll('[data-original]');
         if (!btn || !tracked.length) return;
-
         function check() {
-            btn.disabled = !Array.from(tracked).some(function (el) {
+            btn.disabled = !Array.from(tracked).some(function(el) {
                 return el.value !== el.dataset.original;
             });
         }
-        tracked.forEach(function (el) {
+        tracked.forEach(function(el) {
             el.addEventListener('change', check);
             el.addEventListener('input',  check);
         });
@@ -639,7 +720,27 @@ include("../includes/manager/layout_start.php");
 
     document.querySelectorAll('.js-track-form').forEach(bindTrackForm);
     document.querySelectorAll('.js-edit-modal-form').forEach(bindTrackForm);
-})();
+
+    // Pre-populate add specs if modal re-opens after error
+    <?php if (!empty($_POST['eq_specs'])): ?>
+    (function() {
+        var specs = <?= json_encode($_POST['eq_specs']) ?>;
+        if (!specs) return;
+        specs.split(' · ').forEach(function(entry) {
+            var sep   = entry.indexOf(': ');
+            var lbl   = sep >= 0 ? entry.substring(0, sep).trim() : entry.trim();
+            var val   = sep >= 0 ? entry.substring(sep + 2).trim() : '';
+            addSpecRow('addSpecRows');
+            var rows = document.getElementById('addSpecRows').querySelectorAll(':scope > div');
+            var last = rows[rows.length - 1];
+            if (last) {
+                if (last.querySelector('.spec-label')) last.querySelector('.spec-label').value = lbl;
+                if (last.querySelector('.spec-value')) last.querySelector('.spec-value').value = val;
+            }
+        });
+    })();
+    <?php endif; ?>
+});
 </script>
 
 <?php include("../includes/manager/layout_end.php"); ?>
