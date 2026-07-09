@@ -9,18 +9,15 @@ $adminPendingCount = (int) mysqli_fetch_assoc(mysqli_query($conn,
     "SELECT COUNT(*) AS total FROM Application WHERE Status = 'Pending'"))['total'];
 
 // ── OPERATIONAL KPIs ────────────────────────────────────────
-$activeSites = (int) mysqli_fetch_assoc(mysqli_query($conn,
-    "SELECT COUNT(*) AS total FROM Project WHERE ProjectStatus = 'Ongoing'"))['total'];
+$totalProjects = (int) mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT (SELECT COUNT(*) FROM Project) + (SELECT COUNT(*) FROM ProjectShowcase) AS total"))['total'];
 
-$sitesThisMonth = (int) mysqli_fetch_assoc(mysqli_query($conn,
-    "SELECT COUNT(*) AS total FROM Project
-     WHERE ProjectStatus = 'Ongoing' AND StartDate >= DATE_FORMAT(CURDATE(),'%Y-%m-01')"))['total'];
+$activeProjects = (int) mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT (SELECT COUNT(*) FROM Project WHERE ProjectStatus='Ongoing') +
+            (SELECT COUNT(*) FROM ProjectShowcase WHERE Status='Ongoing') AS total"))['total'];
 
 $equipmentUtilization = adminEquipmentUtilization($conn);
-$complianceScore      = adminComplianceScore($conn);
-
-$lastAuditRow   = mysqli_fetch_assoc(mysqli_query($conn, "SELECT MAX(UpdateDate) AS last_audit FROM Project_Update"));
-$lastAuditLabel = adminTimeAgo($lastAuditRow['last_audit'] ?? null);
+$complianceScore = adminComplianceScore($conn);
 
 // ── FINANCIAL KPIs ──────────────────────────────────────────
 // Approved revenue — this month
@@ -175,10 +172,10 @@ include("../includes/admin/layout_start.php");
         <div class="admin-kpi-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M2 20h20M5 20V8l7-4 7 4v12"/></svg>
         </div>
-        <div class="admin-kpi-label">Active Sites</div>
-        <div class="admin-kpi-value"><?= $activeSites ?></div>
-        <div class="admin-kpi-meta<?= $sitesThisMonth > 0 ? ' positive' : '' ?>">
-            <?= $sitesThisMonth > 0 ? "+{$sitesThisMonth} started this month" : 'No new sites this month' ?>
+        <div class="admin-kpi-label">Total Projects</div>
+        <div class="admin-kpi-value"><?= $totalProjects ?></div>
+        <div class="admin-kpi-meta<?= $activeProjects > 0 ? ' positive' : '' ?>">
+            <?= $activeProjects ?> currently active
         </div>
     </div>
     <div class="admin-kpi-card">
@@ -205,11 +202,11 @@ include("../includes/admin/layout_start.php");
     </div>
     <div class="admin-kpi-card">
         <div class="admin-kpi-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
         </div>
-        <div class="admin-kpi-label">Compliance Score</div>
-        <div class="admin-kpi-value"><?= $complianceScore ?><span style="font-size:1rem;font-weight:500;">/100</span></div>
-        <div class="admin-kpi-meta">Last audit: <?= htmlspecialchars($lastAuditLabel) ?></div>
+        <div class="admin-kpi-label">Completion Rate</div>
+        <div class="admin-kpi-value"><?= $complianceScore ?>%</div>
+        <div class="admin-kpi-meta">Projects marked as completed</div>
     </div>
 </div>
 

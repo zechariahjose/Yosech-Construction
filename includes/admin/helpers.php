@@ -113,15 +113,14 @@ function adminComplianceScore(mysqli $conn): int
     $row = mysqli_fetch_assoc(mysqli_query(
         $conn,
         "SELECT COUNT(*) AS total,
-                SUM(CASE WHEN ProjectStatus IN ('On Hold', 'Cancelled') THEN 1 ELSE 0 END) AS issues
+                SUM(CASE WHEN ProjectStatus = 'Completed' THEN 1 ELSE 0 END) AS completed
          FROM Project"
     ));
 
-    $total = (int) ($row['total'] ?? 0);
-    if ($total === 0) {
-        return 100;
-    }
+    $total     = (int) ($row['total']     ?? 0);
+    $completed = (int) ($row['completed'] ?? 0);
 
-    $issues = (int) ($row['issues'] ?? 0);
-    return max(0, min(100, 100 - (int) round(($issues / $total) * 100)));
+    if ($total === 0) return 0;
+
+    return (int) round(($completed / $total) * 100);
 }
