@@ -52,12 +52,6 @@ $momChange  = $revenueLastMonth > 0
     : ($revenueThisMonth > 0 ? 100 : 0);
 $momPositive = $momChange >= 0;
 
-// Approved rentals this month
-$rentalsThisMonth = (int) mysqli_fetch_assoc(mysqli_query($conn,
-    "SELECT COUNT(*) AS total FROM Application
-     WHERE Status='Approved' AND ApplicationType='Equipment Rental'
-     AND SubmissionDate >= DATE_FORMAT(CURDATE(),'%Y-%m-01')"))['total'];
-
 // ── REVENUE BREAKDOWN ────────────────────────────────────────
 $revenueToday = (float) mysqli_fetch_assoc(mysqli_query($conn,
     "SELECT COALESCE(SUM(ProposalBudget),0) AS total FROM Application
@@ -175,8 +169,8 @@ $adminPageActions  = '
 include("../includes/admin/layout_start.php");
 ?>
 
-<!-- ── Row 1: Operational KPIs ──────────────────────────── -->
-<div class="admin-kpi-grid" style="margin-bottom:14px;">
+<!-- ── KPI Row — Operational ──────────────────────────────── -->
+<div class="admin-kpi-grid" style="margin-bottom:20px;">
     <div class="admin-kpi-card">
         <div class="admin-kpi-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M2 20h20M5 20V8l7-4 7 4v12"/></svg>
@@ -187,7 +181,6 @@ include("../includes/admin/layout_start.php");
             <?= $sitesThisMonth > 0 ? "+{$sitesThisMonth} started this month" : 'No new sites this month' ?>
         </div>
     </div>
-
     <div class="admin-kpi-card">
         <div class="admin-kpi-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/></svg>
@@ -198,7 +191,6 @@ include("../includes/admin/layout_start.php");
             <?= $equipmentUtilization >= 70 && $equipmentUtilization <= 95 ? 'Optimal range' : ($equipmentUtilization > 95 ? 'High demand' : 'Low utilization') ?>
         </div>
     </div>
-
     <div class="admin-kpi-card">
         <div class="admin-kpi-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
@@ -207,14 +199,10 @@ include("../includes/admin/layout_start.php");
         <div class="admin-kpi-value"><?= $adminPendingCount ?></div>
         <div class="admin-kpi-meta<?= $adminPendingCount > 0 ? ' alert' : '' ?>">
             <?php if ($adminPendingCount > 0): ?>
-                <?= (int)($pendingBreakdown['pending_projects'] ?? 0) ?> projects ·
-                <?= (int)($pendingBreakdown['pending_rentals']  ?? 0) ?> rentals
-            <?php else: ?>
-                All reviewed
-            <?php endif; ?>
+                <?= (int)($pendingBreakdown['pending_projects'] ?? 0) ?> projects · <?= (int)($pendingBreakdown['pending_rentals'] ?? 0) ?> rentals
+            <?php else: ?>All reviewed<?php endif; ?>
         </div>
     </div>
-
     <div class="admin-kpi-card">
         <div class="admin-kpi-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -225,104 +213,54 @@ include("../includes/admin/layout_start.php");
     </div>
 </div>
 
-<!-- ── Row 2: Financial KPIs ────────────────────────────── -->
-<div class="admin-kpi-grid" style="margin-bottom:22px;">
-    <div class="admin-kpi-card" style="border-top:3px solid #059669;">
-        <div class="admin-kpi-label">Approved Pipeline (All Time)</div>
-        <div class="admin-kpi-value" style="font-size:1.5rem;">₱<?= number_format($totalPipeline, 0) ?></div>
-        <div class="admin-kpi-meta positive">Total approved project value</div>
-    </div>
-
-    <div class="admin-kpi-card" style="border-top:3px solid #6b7f94;">
-        <div class="admin-kpi-label">Revenue This Month</div>
-        <div class="admin-kpi-value" style="font-size:1.5rem;">₱<?= number_format($revenueThisMonth, 0) ?></div>
-        <div class="admin-kpi-meta <?= $momPositive ? 'positive' : 'alert' ?>">
-            <?php if ($revenueLastMonth > 0 || $revenueThisMonth > 0): ?>
-                <?= $momPositive ? '▲' : '▼' ?> <?= abs($momChange) ?>% vs last month
-            <?php else: ?>
-                No data for comparison
-            <?php endif; ?>
-        </div>
-    </div>
-
-    <div class="admin-kpi-card" style="border-top:3px solid #f59e0b;">
-        <div class="admin-kpi-label">Pending Pipeline</div>
-        <div class="admin-kpi-value" style="font-size:1.5rem;">₱<?= number_format($pendingPipeline, 0) ?></div>
-        <div class="admin-kpi-meta<?= $pendingPipeline > 0 ? ' alert' : '' ?>">
-            <?= $pendingPipeline > 0 ? 'Awaiting PM approval' : 'No pending proposals' ?>
-        </div>
-    </div>
-
-    <div class="admin-kpi-card" style="border-top:3px solid #6b7f94;">
-        <div class="admin-kpi-label">Rentals Approved This Month</div>
-        <div class="admin-kpi-value"><?= $rentalsThisMonth ?></div>
-        <div class="admin-kpi-meta">Equipment rentals confirmed</div>
-    </div>
-</div>
-
 <!-- ── Revenue Breakdown ─────────────────────────────────── -->
-<div class="admin-panel" style="margin-bottom:22px;">
+<div class="admin-panel" style="margin-bottom:22px;overflow:hidden;">
     <div class="admin-panel-head">
-        <h2 class="admin-panel-title">Revenue Breakdown</h2>
-        <span class="admin-table-sub">Approved project proposals only</span>
+        <h2 class="admin-panel-title">Revenue</h2>
+        <span class="admin-table-sub">From approved project proposals</span>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0;">
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);">
 
-        <!-- Today -->
         <div style="padding:18px 20px;border-right:1px solid var(--ysc-border-light);">
-            <div class="admin-kpi-label">Today</div>
-            <div style="font-size:1.25rem;font-weight:800;color:var(--ysc-text);letter-spacing:-0.02em;margin:6px 0 4px;">
-                ₱<?= number_format($revenueToday, 0) ?>
-            </div>
-            <div style="font-size:0.73rem;color:var(--ysc-muted);"><?= date('M d, Y') ?></div>
+            <div class="admin-kpi-label" style="margin-bottom:8px;">Today</div>
+            <div style="font-size:1.15rem;font-weight:800;color:var(--ysc-text);letter-spacing:-0.02em;">₱<?= number_format($revenueToday, 0) ?></div>
+            <div style="font-size:0.72rem;color:var(--ysc-muted);margin-top:4px;"><?= date('M d, Y') ?></div>
         </div>
 
-        <!-- This month -->
         <div style="padding:18px 20px;border-right:1px solid var(--ysc-border-light);">
-            <div class="admin-kpi-label">This Month</div>
-            <div style="font-size:1.25rem;font-weight:800;color:var(--ysc-text);letter-spacing:-0.02em;margin:6px 0 4px;">
-                ₱<?= number_format($revenueThisMonth, 0) ?>
-            </div>
-            <div style="font-size:0.73rem;<?= $momPositive ? 'color:#059669;' : 'color:#dc2626;' ?>font-weight:600;">
+            <div class="admin-kpi-label" style="margin-bottom:8px;">This Month</div>
+            <div style="font-size:1.15rem;font-weight:800;color:var(--ysc-text);letter-spacing:-0.02em;">₱<?= number_format($revenueThisMonth, 0) ?></div>
+            <div style="font-size:0.72rem;font-weight:600;margin-top:4px;<?= $momPositive ? 'color:#059669;' : 'color:#dc2626;' ?>">
                 <?php if ($revenueLastMonth > 0 || $revenueThisMonth > 0): ?>
                     <?= $momPositive ? '▲' : '▼' ?> <?= abs($momChange) ?>% vs last month
-                <?php else: ?>
-                    <span style="color:var(--ysc-muted);font-weight:400;">No data to compare</span>
-                <?php endif; ?>
+                <?php else: ?><span style="color:var(--ysc-muted);font-weight:400;">No prior data</span><?php endif; ?>
             </div>
         </div>
 
-        <!-- Last 30 days -->
         <div style="padding:18px 20px;border-right:1px solid var(--ysc-border-light);">
-            <div class="admin-kpi-label">Last 30 Days</div>
-            <div style="font-size:1.25rem;font-weight:800;color:var(--ysc-text);letter-spacing:-0.02em;margin:6px 0 4px;">
-                ₱<?= number_format($revenueLast30, 0) ?>
-            </div>
-            <div style="font-size:0.73rem;color:var(--ysc-muted);">Rolling 30-day window</div>
+            <div class="admin-kpi-label" style="margin-bottom:8px;">Last 30 Days</div>
+            <div style="font-size:1.15rem;font-weight:800;color:var(--ysc-text);letter-spacing:-0.02em;">₱<?= number_format($revenueLast30, 0) ?></div>
+            <div style="font-size:0.72rem;color:var(--ysc-muted);margin-top:4px;">Rolling window</div>
         </div>
 
-        <!-- This year -->
         <div style="padding:18px 20px;border-right:1px solid var(--ysc-border-light);">
-            <div class="admin-kpi-label">This Year</div>
-            <div style="font-size:1.25rem;font-weight:800;color:var(--ysc-text);letter-spacing:-0.02em;margin:6px 0 4px;">
-                ₱<?= number_format($revenueThisYear, 0) ?>
-            </div>
-            <div style="font-size:0.73rem;<?= $yoyPositive ? 'color:#059669;' : 'color:#dc2626;' ?>font-weight:600;">
+            <div class="admin-kpi-label" style="margin-bottom:8px;">This Year</div>
+            <div style="font-size:1.15rem;font-weight:800;color:var(--ysc-text);letter-spacing:-0.02em;">₱<?= number_format($revenueThisYear, 0) ?></div>
+            <div style="font-size:0.72rem;font-weight:600;margin-top:4px;<?= $yoyPositive ? 'color:#059669;' : 'color:#dc2626;' ?>">
                 <?php if ($revenueLastYear > 0 || $revenueThisYear > 0): ?>
                     <?= $yoyPositive ? '▲' : '▼' ?> <?= abs($yoyChange) ?>% vs <?= date('Y') - 1 ?>
-                <?php else: ?>
-                    <span style="color:var(--ysc-muted);font-weight:400;">First year of data</span>
-                <?php endif; ?>
+                <?php else: ?><span style="color:var(--ysc-muted);font-weight:400;">First year</span><?php endif; ?>
             </div>
         </div>
 
-        <!-- Total -->
         <div style="padding:18px 20px;background:var(--ysc-bg);">
-            <div class="admin-kpi-label">Total (All Time)</div>
-            <div style="font-size:1.25rem;font-weight:800;color:#059669;letter-spacing:-0.02em;margin:6px 0 4px;">
-                ₱<?= number_format($totalPipeline, 0) ?>
+            <div class="admin-kpi-label" style="margin-bottom:8px;">All Time</div>
+            <div style="font-size:1.15rem;font-weight:800;color:#059669;letter-spacing:-0.02em;">₱<?= number_format($totalPipeline, 0) ?></div>
+            <div style="font-size:0.72rem;color:var(--ysc-muted);margin-top:4px;">
+                <?php if ($pendingPipeline > 0): ?>
+                    + ₱<?= number_format($pendingPipeline, 0) ?> pending
+                <?php else: ?>Cumulative total<?php endif; ?>
             </div>
-            <div style="font-size:0.73rem;color:var(--ysc-muted);">Cumulative approved value</div>
         </div>
 
     </div>
