@@ -12,6 +12,30 @@ if (!defined('BASE_URL')) {
     }
     define('BASE_URL', $appBase);
 }
+
+// ── Track last_active for online presence ───────────────────
+// Only run once per minute per session to avoid DB hammering
+if (isset($_SESSION['user_id'], $_SESSION['user_type'])) {
+    $nowTs = time();
+    if (!isset($_SESSION['last_active_update']) || ($nowTs - $_SESSION['last_active_update']) >= 60) {
+        $_SESSION['last_active_update'] = $nowTs;
+        // Determine which table to update
+        if (!isset($GLOBALS['conn'])) {
+            @include_once __DIR__ . '/../config/database.php';
+        }
+        if (isset($GLOBALS['conn']) || isset($conn)) {
+            $db  = $GLOBALS['conn'] ?? $conn;
+            $uid = (int) $_SESSION['user_id'];
+            if ($_SESSION['user_type'] === 'Client') {
+                $upStmt = mysqli_prepare($db, "UPDATE Client SET last_active=NOW() WHERE UserID=?");
+                if ($upStmt) { mysqli_stmt_bind_param($upStmt,"i",$uid); mysqli_stmt_execute($upStmt); }
+            } else {
+                $upStmt = mysqli_prepare($db, "UPDATE Employee SET last_active=NOW() WHERE EmployeeID=?");
+                if ($upStmt) { mysqli_stmt_bind_param($upStmt,"i",$uid); mysqli_stmt_execute($upStmt); }
+            }
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

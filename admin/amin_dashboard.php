@@ -106,14 +106,29 @@ $activityResult = mysqli_query($conn,
      ) actions ORDER BY action_date DESC LIMIT 6"
 );
 
-// ── SYSTEM STATUS ───────────────────────────────────────────
-$dbLoadRow = mysqli_fetch_assoc(mysqli_query($conn,
-    "SELECT (SELECT COUNT(*) FROM Application) +
-            (SELECT COUNT(*) FROM Project) +
-            (SELECT COUNT(*) FROM Client) +
-            (SELECT COUNT(*) FROM Equipment) AS record_count"
-));
-$dbLoadPercent = min(100, max(8, (int) round((int)($dbLoadRow['record_count'] ?? 0) / 2)));
+// ── USER ACTIVITY ───────────────────────────────────────────
+$totalClients = (int) mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT COUNT(*) AS t FROM Client"))['t'];
+$totalStaff   = (int) mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT COUNT(*) AS t FROM Employee"))['t'];
+
+// Check if last_active columns exist before querying
+$hasClientActive = (bool) mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Client' AND COLUMN_NAME='last_active'"));
+$hasEmpActive = (bool) mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Employee' AND COLUMN_NAME='last_active'"));
+
+$onlineClients = $hasClientActive
+    ? (int) mysqli_fetch_assoc(mysqli_query($conn,
+        "SELECT COUNT(*) AS t FROM Client WHERE last_active >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)"))['t']
+    : null;
+$onlineStaff   = $hasEmpActive
+    ? (int) mysqli_fetch_assoc(mysqli_query($conn,
+        "SELECT COUNT(*) AS t FROM Employee WHERE last_active >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)"))['t']
+    : null;
+$totalOnline   = ($onlineClients ?? 0) + ($onlineStaff ?? 0);
 
 // ── PENDING APPLICATIONS BREAKDOWN ─────────────────────────
 $pendingBreakdown = mysqli_fetch_assoc(mysqli_query($conn,
@@ -319,37 +334,67 @@ include("../includes/admin/layout_start.php");
             </ul>
         </div>
 
-        <!-- System status -->
+        <!-- User activity -->
         <div class="admin-panel">
             <div class="admin-panel-head">
-                <h2 class="admin-panel-title">System Status</h2>
+                <h2 class="admin-panel-title">User Activity</h2>
+                <?php if (!$hasClientActive || !$hasEmpActive): ?>
+                    <span class="admin-table-sub" style="font-size:0.72rem;">Run migration to enable online tracking</span>
+                <?php endif; ?>
             </div>
             <div class="admin-status-list">
+
+                <!-- Total Clients -->
                 <div class="admin-status-row">
-                    <span>Database</span>
-                    <span class="admin-status-dot">Stable</span>
+                    <span style="display:flex;align-items:center;gap:8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        Total Clients
+                    </span>
+                    <strong><?= $totalClients ?></strong>
                 </div>
-                <div>
-                    <div class="admin-status-row">
-                        <span>Records Indexed</span>
-                        <span><?= number_format((int)($dbLoadRow['record_count'] ?? 0)) ?></span>
-                    </div>
-                    <div class="admin-progress">
-                        <div class="admin-progress-bar" style="width:<?= $dbLoadPercent ?>%;"></div>
-                    </div>
-                </div>
+
+                <!-- Total Staff -->
                 <div class="admin-status-row">
-                    <span>Server Time</span>
-                    <span><?= gmdate('H:i') ?> UTC</span>
+                    <span style="display:flex;align-items:center;gap:8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        Total Staff
+                    </span>
+                    <strong><?= $totalStaff ?></strong>
                 </div>
-                <div class="admin-status-row">
-                    <span>Total Clients</span>
-                    <span><?= (int)mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) AS t FROM Client"))['t'] ?></span>
+
+                <!-- Online now -->
+                <div class="admin-status-row" style="padding-top:12px;border-top:1px solid var(--ysc-border-light);margin-top:4px;">
+                    <span style="display:flex;align-items:center;gap:8px;">
+                        <?php if ($hasClientActive && $hasEmpActive): ?>
+                            <span style="width:8px;height:8px;border-radius:50%;background:#059669;display:inline-block;flex-shrink:0;"></span>
+                        <?php else: ?>
+                            <span style="width:8px;height:8px;border-radius:50%;background:#d1d5db;display:inline-block;flex-shrink:0;"></span>
+                        <?php endif; ?>
+                        Online Now
+                        <span style="font-size:0.72rem;color:var(--ysc-muted);">(last 15 min)</span>
+                    </span>
+                    <?php if ($hasClientActive && $hasEmpActive): ?>
+                        <strong style="color:#059669;"><?= $totalOnline ?></strong>
+                    <?php else: ?>
+                        <span class="admin-table-sub">—</span>
+                    <?php endif; ?>
                 </div>
-                <div class="admin-status-row">
-                    <span>Total Staff</span>
-                    <span><?= (int)mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) AS t FROM Employee"))['t'] ?></span>
+
+                <?php if ($hasClientActive && $hasEmpActive && $totalOnline > 0): ?>
+                <div style="padding:10px 20px 4px;font-size:0.78rem;color:var(--ysc-muted);">
+                    <?php if ($onlineClients > 0): ?>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                            <span>Clients online</span><span><?= $onlineClients ?></span>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($onlineStaff > 0): ?>
+                        <div style="display:flex;justify-content:space-between;">
+                            <span>Staff online</span><span><?= $onlineStaff ?></span>
+                        </div>
+                    <?php endif; ?>
                 </div>
+                <?php endif; ?>
+
             </div>
         </div>
 
