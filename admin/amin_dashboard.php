@@ -58,6 +58,33 @@ $rentalsThisMonth = (int) mysqli_fetch_assoc(mysqli_query($conn,
      WHERE Status='Approved' AND ApplicationType='Equipment Rental'
      AND SubmissionDate >= DATE_FORMAT(CURDATE(),'%Y-%m-01')"))['total'];
 
+// ── REVENUE BREAKDOWN ────────────────────────────────────────
+$revenueToday = (float) mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT COALESCE(SUM(ProposalBudget),0) AS total FROM Application
+     WHERE Status='Approved' AND ApplicationType='New Project'
+     AND SubmissionDate = CURDATE()"))['total'];
+
+$revenueLast30 = (float) mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT COALESCE(SUM(ProposalBudget),0) AS total FROM Application
+     WHERE Status='Approved' AND ApplicationType='New Project'
+     AND SubmissionDate >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)"))['total'];
+
+$revenueThisYear = (float) mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT COALESCE(SUM(ProposalBudget),0) AS total FROM Application
+     WHERE Status='Approved' AND ApplicationType='New Project'
+     AND YEAR(SubmissionDate) = YEAR(CURDATE())"))['total'];
+
+// Year-over-year change
+$revenueLastYear = (float) mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT COALESCE(SUM(ProposalBudget),0) AS total FROM Application
+     WHERE Status='Approved' AND ApplicationType='New Project'
+     AND YEAR(SubmissionDate) = YEAR(CURDATE()) - 1"))['total'];
+
+$yoyChange   = $revenueLastYear > 0
+    ? round((($revenueThisYear - $revenueLastYear) / $revenueLastYear) * 100, 1)
+    : ($revenueThisYear > 0 ? 100 : 0);
+$yoyPositive = $yoyChange >= 0;
+
 // ── PROJECT OVERSIGHT TABLE ─────────────────────────────────
 $searchQuery = trim($_GET['q'] ?? '');
 $projectSql  = "
@@ -230,6 +257,74 @@ include("../includes/admin/layout_start.php");
         <div class="admin-kpi-label">Rentals Approved This Month</div>
         <div class="admin-kpi-value"><?= $rentalsThisMonth ?></div>
         <div class="admin-kpi-meta">Equipment rentals confirmed</div>
+    </div>
+</div>
+
+<!-- ── Revenue Breakdown ─────────────────────────────────── -->
+<div class="admin-panel" style="margin-bottom:22px;">
+    <div class="admin-panel-head">
+        <h2 class="admin-panel-title">Revenue Breakdown</h2>
+        <span class="admin-table-sub">Approved project proposals only</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0;">
+
+        <!-- Today -->
+        <div style="padding:18px 20px;border-right:1px solid var(--ysc-border-light);">
+            <div class="admin-kpi-label">Today</div>
+            <div style="font-size:1.25rem;font-weight:800;color:var(--ysc-text);letter-spacing:-0.02em;margin:6px 0 4px;">
+                ₱<?= number_format($revenueToday, 0) ?>
+            </div>
+            <div style="font-size:0.73rem;color:var(--ysc-muted);"><?= date('M d, Y') ?></div>
+        </div>
+
+        <!-- This month -->
+        <div style="padding:18px 20px;border-right:1px solid var(--ysc-border-light);">
+            <div class="admin-kpi-label">This Month</div>
+            <div style="font-size:1.25rem;font-weight:800;color:var(--ysc-text);letter-spacing:-0.02em;margin:6px 0 4px;">
+                ₱<?= number_format($revenueThisMonth, 0) ?>
+            </div>
+            <div style="font-size:0.73rem;<?= $momPositive ? 'color:#059669;' : 'color:#dc2626;' ?>font-weight:600;">
+                <?php if ($revenueLastMonth > 0 || $revenueThisMonth > 0): ?>
+                    <?= $momPositive ? '▲' : '▼' ?> <?= abs($momChange) ?>% vs last month
+                <?php else: ?>
+                    <span style="color:var(--ysc-muted);font-weight:400;">No data to compare</span>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Last 30 days -->
+        <div style="padding:18px 20px;border-right:1px solid var(--ysc-border-light);">
+            <div class="admin-kpi-label">Last 30 Days</div>
+            <div style="font-size:1.25rem;font-weight:800;color:var(--ysc-text);letter-spacing:-0.02em;margin:6px 0 4px;">
+                ₱<?= number_format($revenueLast30, 0) ?>
+            </div>
+            <div style="font-size:0.73rem;color:var(--ysc-muted);">Rolling 30-day window</div>
+        </div>
+
+        <!-- This year -->
+        <div style="padding:18px 20px;border-right:1px solid var(--ysc-border-light);">
+            <div class="admin-kpi-label">This Year</div>
+            <div style="font-size:1.25rem;font-weight:800;color:var(--ysc-text);letter-spacing:-0.02em;margin:6px 0 4px;">
+                ₱<?= number_format($revenueThisYear, 0) ?>
+            </div>
+            <div style="font-size:0.73rem;<?= $yoyPositive ? 'color:#059669;' : 'color:#dc2626;' ?>font-weight:600;">
+                <?php if ($revenueLastYear > 0 || $revenueThisYear > 0): ?>
+                    <?= $yoyPositive ? '▲' : '▼' ?> <?= abs($yoyChange) ?>% vs <?= date('Y') - 1 ?>
+                <?php else: ?>
+                    <span style="color:var(--ysc-muted);font-weight:400;">First year of data</span>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Total -->
+        <div style="padding:18px 20px;background:var(--ysc-bg);">
+            <div class="admin-kpi-label">Total (All Time)</div>
+            <div style="font-size:1.25rem;font-weight:800;color:#059669;letter-spacing:-0.02em;margin:6px 0 4px;">
+                ₱<?= number_format($totalPipeline, 0) ?>
+            </div>
+            <div style="font-size:0.73rem;color:var(--ysc-muted);">Cumulative approved value</div>
+        </div>
+
     </div>
 </div>
 
