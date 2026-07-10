@@ -39,6 +39,14 @@ $onHoldCount = (int) mysqli_fetch_assoc(mysqli_query($conn,
      INNER JOIN Project p ON p.ApplicationID = a.ApplicationID
      WHERE p.ProjectStatus = 'On Hold'"))['t'];
 
+$paymentIssues = (int) mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT COUNT(DISTINCT c.UserID) AS t
+     FROM Client c
+     INNER JOIN Application a ON a.UserID = c.UserID
+     INNER JOIN Project p ON p.ApplicationID = a.ApplicationID
+     WHERE p.ProjectPaymentStatus IN ('Unpaid','Partial')
+       AND p.ProjectStatus NOT IN ('Cancelled')"))['t'];
+
 // ── BUILD QUERY — all clients with any project ───────────────
 $whereFilter = '';
 if ($activeFilter === 'active') {
@@ -60,6 +68,8 @@ $sql = "
     SELECT c.UserID,
            c.Client_FirstName, c.Client_MI, c.Client_LastName,
            c.Client_Username, c.Client_Email, c.Client_ContactNumber,
+           SUM(p.ProjectPaymentStatus = 'Unpaid')                             AS unpaid_count,
+           SUM(p.ProjectPaymentStatus = 'Partial')                            AS partial_count,
            COUNT(DISTINCT p.ProjectID)                                      AS total_projects,
            SUM(p.ProjectStatus = 'Ongoing')                                AS ongoing_count,
            SUM(p.ProjectStatus = 'On Hold')                                AS onhold_count,
@@ -86,7 +96,7 @@ function tabUrl(string $filter, string $q): string {
 }
 
 $mgrActiveNav    = 'clients';
-$mgrPageTitle    = 'Site Clients';
+$mgrPageTitle    = 'Clients';
 $mgrPageSubtitle = 'All clients with linked project records across every status.';
 $mgrPageActions  = '';
 
@@ -94,9 +104,9 @@ include("../includes/manager/layout_start.php");
 ?>
 
 <!-- ── KPI Cards ─────────────────────────────────────────── -->
-<div class="admin-kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;">
+<div class="admin-kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:24px;">
     <div class="admin-kpi-card">
-        <div class="admin-kpi-label">Total Site Clients</div>
+        <div class="admin-kpi-label">Total Clients</div>
         <div class="admin-kpi-value"><?= $totalClients ?></div>
         <div class="admin-kpi-meta">Have at least one project</div>
     </div>
@@ -116,6 +126,13 @@ include("../includes/manager/layout_start.php");
         <div class="admin-kpi-label">Completed</div>
         <div class="admin-kpi-value"><?= $completedCount ?></div>
         <div class="admin-kpi-meta">Projects finished</div>
+    </div>
+    <div class="admin-kpi-card <?= $paymentIssues > 0 ? 'manager-kpi-warn' : '' ?>">
+        <div class="admin-kpi-label">Payment Issues</div>
+        <div class="admin-kpi-value"><?= $paymentIssues ?></div>
+        <div class="admin-kpi-meta<?= $paymentIssues > 0 ? ' alert' : '' ?>">
+            <?= $paymentIssues > 0 ? 'Unpaid or partial' : 'All payments clear' ?>
+        </div>
     </div>
 </div>
 
@@ -180,6 +197,7 @@ include("../includes/manager/layout_start.php");
                     <th>Contact</th>
                     <th>Projects</th>
                     <th>Status Breakdown</th>
+                    <th>Payment</th>
                     <th>Last Update</th>
                 </tr>
             </thead>
@@ -237,6 +255,27 @@ include("../includes/manager/layout_start.php");
                                 <span class="admin-badge admin-badge-cancelled"><?= (int)$client['cancelled_count'] ?> Cancelled</span>
                             <?php endif; ?>
                         </div>
+                    </td>
+
+                    <!-- Payment status -->
+                    <td>
+                        <?php
+                        $unpaid  = (int)$client['unpaid_count'];
+                        $partial = (int)$client['partial_count'];
+                        ?>
+                        <?php if ($unpaid > 0): ?>
+                            <span class="admin-badge admin-badge-delay" style="display:block;margin-bottom:3px;">
+                                <?= $unpaid ?> Unpaid
+                            </span>
+                        <?php endif; ?>
+                        <?php if ($partial > 0): ?>
+                            <span class="admin-badge admin-badge-pending" style="display:block;">
+                                <?= $partial ?> Partial
+                            </span>
+                        <?php endif; ?>
+                        <?php if ($unpaid === 0 && $partial === 0): ?>
+                            <span style="color:#059669;font-size:0.78rem;font-weight:600;">✓ Clear</span>
+                        <?php endif; ?>
                     </td>
 
                     <!-- Last interaction -->
