@@ -397,6 +397,46 @@ while ($row = mysqli_fetch_assoc($internalRestResult)) {
 $activeRows = array_merge($showcaseActive, $internalActiveRows);
 $allRows    = array_merge($showcaseRest, $internalRestRows);
 
+// ── KPI COUNTS ─────────────────────────────────────────────
+$kpiTotal = (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM Project"))[0]
+          + (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM ProjectShowcase"))[0];
+
+$kpiOngoing = (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM Project WHERE ProjectStatus='Ongoing'"))[0]
+            + (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM ProjectShowcase WHERE Status='Ongoing'"))[0];
+
+$kpiOnHold = (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM Project WHERE ProjectStatus='On Hold'"))[0]
+           + (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM ProjectShowcase WHERE Status='On Hold'"))[0];
+
+$kpiCompleted = (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM Project WHERE ProjectStatus='Completed'"))[0]
+              + (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM ProjectShowcase WHERE Status='Completed'"))[0];
+
+// ── SEARCH / FILTER PARAMS ──────────────────────────────────
+$statusFilter = $_GET['status'] ?? '';
+$searchFilter = trim($_GET['q'] ?? '');
+
+// ── MERGE & FILTER ALL ROWS ─────────────────────────────────
+$allMerged = array_merge($activeRows, $allRows);
+
+$filteredRows = array_filter($allMerged, function($project) use ($statusFilter, $searchFilter) {
+    // Determine status and title for this row
+    $rowStatus = $project['_source'] === 'showcase'
+        ? ($project['Status'] ?? '')
+        : ($project['ProjectStatus'] ?? '');
+
+    $rowTitle = $project['_source'] === 'showcase'
+        ? ($project['Title'] ?? '')
+        : adminProjectDisplayName($project);
+
+    if ($statusFilter !== '' && $rowStatus !== $statusFilter) {
+        return false;
+    }
+    if ($searchFilter !== '' && stripos($rowTitle, $searchFilter) === false) {
+        return false;
+    }
+    return true;
+});
+$filteredRows = array_values($filteredRows);
+
 $mgrActiveNav    = 'projects';
 $mgrPageTitle    = 'Projects';
 $mgrPageSubtitle = 'Manage website showcase projects and track internal site progress.';
@@ -415,56 +455,83 @@ include("../includes/manager/layout_start.php");
 <?php endif; ?>
 
 <!-- ══════════════════════════════════════════════════════════
-     SECTION 1 — ACTIVE PROJECTS (Ongoing — website + internal)
+     KPI SUMMARY CARDS
      ══════════════════════════════════════════════════════════ -->
-<div style="margin-bottom:8px;">
-    <h2 class="admin-page-title" style="font-size:1rem;margin-bottom:4px;">
-        <span style="display:inline-flex;align-items:center;gap:8px;">
-            <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;flex-shrink:0;display:inline-block;"></span>
-            Active Projects
-        </span>
-    </h2>
-    <p class="admin-page-sub" style="margin-bottom:16px;">All currently ongoing projects — both website showcase and internal site records.</p>
-</div>
-
-<?php if (count($activeRows) === 0): ?>
-    <div class="admin-alert admin-alert-info" style="margin-bottom:32px;">No ongoing projects at the moment.</div>
-<?php else: ?>
-    <div class="pj-list-stack" style="margin-bottom:40px;">
-        <?php foreach ($activeRows as $project): ?>
-            <?php if ($project['_source'] === 'showcase'): ?>
-                <?php include __DIR__ . '/../includes/manager/_showcase_card.php'; ?>
-            <?php else: ?>
-                <?php
-                $status        = managerProjectStatusLabel($project['ProjectStatus']);
-                $updatesResult = mysqli_query($conn,
-                    "SELECT pu.*, e.Username FROM Project_Update pu
-                     LEFT JOIN Employee e ON pu.EmployeeID = e.EmployeeID
-                     WHERE pu.ProjectID = " . (int) $project['ProjectID'] . "
-                     ORDER BY pu.UpdateDate DESC LIMIT 4"
-                );
-                ?>
-                <?php include __DIR__ . '/../includes/manager/_project_card.php'; ?>
-            <?php endif; ?>
-        <?php endforeach; ?>
+<div class="admin-kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;">
+    <div class="admin-kpi-card">
+        <div class="admin-kpi-label">Total Projects</div>
+        <div class="admin-kpi-value"><?= $kpiTotal ?></div>
     </div>
-<?php endif; ?>
-
-<hr class="admin-divider" style="margin-bottom:32px;">
+    <div class="admin-kpi-card">
+        <div class="admin-kpi-label">Active (Ongoing)</div>
+        <div class="admin-kpi-value" style="color:#f59e0b;"><?= $kpiOngoing ?></div>
+    </div>
+    <div class="admin-kpi-card">
+        <div class="admin-kpi-label">On Hold</div>
+        <div class="admin-kpi-value" style="color:#6b7280;"><?= $kpiOnHold ?></div>
+    </div>
+    <div class="admin-kpi-card">
+        <div class="admin-kpi-label">Completed</div>
+        <div class="admin-kpi-value" style="color:#059669;"><?= $kpiCompleted ?></div>
+    </div>
+</div>
 
 <!-- ══════════════════════════════════════════════════════════
-     SECTION 2 — ALL PROJECTS (non-ongoing — website + internal)
+     SEARCH + FILTER BAR
      ══════════════════════════════════════════════════════════ -->
-<div style="margin-bottom:8px;">
-    <h2 class="admin-page-title" style="font-size:1rem;margin-bottom:4px;">All Projects</h2>
-    <p class="admin-page-sub" style="margin-bottom:16px;">Complete history of all project records across every status.</p>
-</div>
+<form method="GET" style="margin-bottom:20px;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <!-- Text search -->
+        <div style="position:relative;flex:1;min-width:200px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor" stroke-width="2"
+                 style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--admin-muted);pointer-events:none;">
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+            </svg>
+            <input type="text" name="q" value="<?= htmlspecialchars($searchFilter) ?>"
+                   placeholder="Search project title…"
+                   style="width:100%;padding:8px 12px 8px 32px;border:1px solid var(--admin-border);border-radius:8px;font-size:0.84rem;font-family:inherit;background:#fff;color:var(--admin-text);box-sizing:border-box;">
+        </div>
 
-<?php if (count($allRows) === 0): ?>
-    <div class="admin-alert admin-alert-info">No projects found. Use the <strong>+ Add Project</strong> button to create one from an approved application.</div>
+        <!-- Status filter tabs -->
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+            <?php
+            $tabs = ['' => 'All', 'Ongoing' => 'Ongoing', 'On Hold' => 'On Hold', 'Completed' => 'Completed'];
+            foreach ($tabs as $tabVal => $tabLabel):
+                $isActive = ($statusFilter === $tabVal);
+            ?>
+            <a href="?status=<?= urlencode($tabVal) ?><?= $searchFilter !== '' ? '&q='.urlencode($searchFilter) : '' ?>"
+               style="padding:7px 14px;font-size:0.78rem;font-weight:600;border-radius:6px;border:1px solid <?= $isActive ? 'var(--ysc-primary)' : 'var(--admin-border)' ?>;background:<?= $isActive ? 'var(--ysc-primary-light)' : '#fff' ?>;color:<?= $isActive ? 'var(--ysc-primary)' : 'var(--admin-muted)' ?>;text-decoration:none;white-space:nowrap;transition:all 0.15s;">
+                <?= htmlspecialchars($tabLabel) ?>
+            </a>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- Submit (for text search) -->
+        <button type="submit" class="admin-btn admin-btn-primary" style="padding:7px 16px;font-size:0.82rem;">Search</button>
+
+        <?php if ($statusFilter !== '' || $searchFilter !== ''): ?>
+        <a href="?" style="font-size:0.78rem;color:var(--admin-muted);text-decoration:none;">✕ Clear</a>
+        <?php endif; ?>
+    </div>
+
+    <!-- Results count -->
+    <div style="margin-top:8px;font-size:0.78rem;color:var(--admin-muted);">
+        <?= count($filteredRows) ?> result<?= count($filteredRows) !== 1 ? 's' : '' ?>
+        <?php if ($statusFilter !== '' || $searchFilter !== ''): ?>
+            — filtered from <?= count($allMerged) ?> total
+        <?php endif; ?>
+    </div>
+</form>
+
+<!-- ══════════════════════════════════════════════════════════
+     MERGED PROJECT LIST
+     ══════════════════════════════════════════════════════════ -->
+<?php if (count($filteredRows) === 0): ?>
+    <div class="admin-alert admin-alert-info">No projects match your current filter. <a href="?" style="color:var(--ysc-primary);">Clear filters</a> or use <strong>+ Add Project</strong> to create one.</div>
 <?php else: ?>
     <div class="pj-list-stack">
-        <?php foreach ($allRows as $project): ?>
+        <?php foreach ($filteredRows as $project): ?>
             <?php if ($project['_source'] === 'showcase'): ?>
                 <?php include __DIR__ . '/../includes/manager/_showcase_card.php'; ?>
             <?php else: ?>

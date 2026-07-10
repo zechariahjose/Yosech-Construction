@@ -55,6 +55,12 @@ $publishedShowcaseId = $alreadyPublished ? (int)$publishedRow['ProjectShowcaseID
             <div class="pj-meta-chip pj-pay <?= $paymentBadge ?>">
                 <?= htmlspecialchars($project['ProjectPaymentStatus']) ?>
             </div>
+            <?php if (!empty($project['ProposalBudget'])): ?>
+            <div class="pj-meta-chip">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                ₱<?= number_format((float)$project['ProposalBudget'], 0) ?>
+            </div>
+            <?php endif; ?>
             <?php if ($updateCount > 0): ?>
             <div class="pj-meta-chip">
                 <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
