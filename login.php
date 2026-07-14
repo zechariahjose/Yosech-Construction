@@ -152,7 +152,7 @@ if (isset($_GET['error'])) $error = 'Invalid username or password. If you don\'t
                 <div class="login-field">
                     <div class="login-field-row">
                         <label for="password">PASSWORD</label>
-                        <a href="#" class="login-forgot">Forgot Password?</a>
+                        <!-- <a href="#" class="login-forgot">Forgot Password?</a> -->
                     </div>
                     <div class="login-password-wrap">
                         <input type="password" id="password" name="password" required autocomplete="current-password">
