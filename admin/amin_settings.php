@@ -100,18 +100,21 @@ if (isset($_POST['reset_employee_pw'], $_POST['target_employee_id'])) {
     mysqli_stmt_execute($up) ? $success = 'Password reset to default (123). The user should change it after logging in.' : $error = 'Failed to reset password.';
 }
 
-// ── RESET CLIENT PASSWORD (default: 123) ───────────────────
-if (isset($_POST['reset_client_pw'], $_POST['target_client_id'])) {
-    $tid  = (int) $_POST['target_client_id'];
-    $hash = password_hash('123', PASSWORD_DEFAULT);
-    $up   = mysqli_prepare($conn, "UPDATE Client SET Client_Password=? WHERE UserID=?");
-    mysqli_stmt_bind_param($up, "si", $hash, $tid);
-    mysqli_stmt_execute($up) ? $success = 'Password reset to default (123). The client should change it after logging in.' : $error = 'Failed to reset password.';
+// ── TOGGLE CLIENT SUSPEND ───────────────────────────────────
+if (isset($_POST['toggle_suspend'], $_POST['target_client_id'])) {
+    $tid      = (int) $_POST['target_client_id'];
+    $newState = isset($_POST['do_suspend']) ? 1 : 0;
+    $label    = $newState ? 'suspended' : 're-enabled';
+    $st = mysqli_prepare($conn, "UPDATE Client SET is_suspended = ? WHERE UserID = ?");
+    mysqli_stmt_bind_param($st, "ii", $newState, $tid);
+    mysqli_stmt_execute($st)
+        ? $success = "Client account has been {$label}."
+        : $error   = "Failed to update client status.";
 }
 
 // ── DATA ────────────────────────────────────────────────────
 $staffRows   = mysqli_query($conn, "SELECT EmployeeID,UserType,Username,Email,ContactNumber FROM Employee ORDER BY UserType,Username");
-$clientRows  = mysqli_query($conn, "SELECT UserID,Client_FirstName,Client_MI,Client_LastName,Client_Username,Client_Email FROM Client ORDER BY Client_LastName,Client_FirstName");
+$clientRows  = mysqli_query($conn, "SELECT UserID,Client_FirstName,Client_MI,Client_LastName,Client_Username,Client_Email,is_suspended FROM Client ORDER BY Client_LastName,Client_FirstName");
 $staffCount  = (int) mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) AS t FROM Employee"))['t'];
 $clientCount = (int) mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) AS t FROM Client"))['t'];
 
@@ -312,9 +315,9 @@ include("../includes/admin/layout_start.php");
                 <td><?= htmlspecialchars($emp['ContactNumber'] ?: '—') ?></td>
                 <td>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                        <form method="POST" style="display:inline;" onsubmit="return confirm('Reset password for <?= htmlspecialchars(addslashes($emp['Username'])) ?> to the default (123)?');">
+                        <form method="POST" style="display:inline;" onsubmit="return confirm('Reset password for <?= htmlspecialchars(addslashes($emp['Username'])) ?> to the default (123)? They should change it immediately after logging in.');">
                             <input type="hidden" name="target_employee_id" value="<?= (int)$emp['EmployeeID'] ?>">
-                            <button type="submit" name="reset_employee_pw" class="admin-btn admin-btn-outline admin-btn-sm">Reset Password</button>
+                            <button type="submit" name="reset_employee_pw" class="admin-btn admin-btn-outline admin-btn-sm">Reset to Default</button>
                         </form>
                         <?php if (!$isMe): ?>
                         <form method="POST" style="display:inline;" onsubmit="return confirm('Remove <?= htmlspecialchars(addslashes($emp['Username'])) ?>? This cannot be undone.');">
@@ -332,29 +335,56 @@ include("../includes/admin/layout_start.php");
 
     <?php else: ?>
 
-    <!-- Clients table with inline reset -->
+    <!-- Clients table with suspend/unsuspend -->
     <div class="admin-panel">
         <div class="admin-panel-head">
             <h2 class="admin-panel-title">Client Accounts</h2>
             <span class="admin-badge admin-badge-track"><?= $clientCount ?> clients</span>
         </div>
         <table class="admin-table">
-            <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
             <?php
-            $clientRows = mysqli_query($conn, "SELECT UserID,Client_FirstName,Client_MI,Client_LastName,Client_Username,Client_Email FROM Client ORDER BY Client_LastName,Client_FirstName");
+            $clientRows = mysqli_query($conn, "SELECT UserID,Client_FirstName,Client_MI,Client_LastName,Client_Username,Client_Email,is_suspended FROM Client ORDER BY Client_LastName,Client_FirstName");
             while ($cli = mysqli_fetch_assoc($clientRows)):
                 $fullName = trim($cli['Client_FirstName'].' '.($cli['Client_MI'] ? $cli['Client_MI'].'. ' : '').$cli['Client_LastName']);
+                $isSuspended = !empty($cli['is_suspended']);
             ?>
             <tr>
                 <td><span class="admin-table-project"><?= htmlspecialchars($fullName) ?></span><span class="admin-table-sub">ID #<?= (int)$cli['UserID'] ?></span></td>
                 <td><?= htmlspecialchars($cli['Client_Username']) ?></td>
                 <td><?= htmlspecialchars($cli['Client_Email']) ?></td>
                 <td>
-                    <form method="POST" style="display:inline;" onsubmit="return confirm('Reset password for <?= htmlspecialchars(addslashes($fullName)) ?> to the default (123)?');">
+                    <?php if ($isSuspended): ?>
+                        <span style="display:inline-flex;align-items:center;gap:4px;font-size:0.7rem;font-weight:700;padding:3px 9px;border-radius:20px;background:#fee2e2;color:#991b1b;letter-spacing:.04em;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg>
+                            Suspended
+                        </span>
+                    <?php else: ?>
+                        <span style="display:inline-flex;align-items:center;gap:4px;font-size:0.7rem;font-weight:700;padding:3px 9px;border-radius:20px;background:#d1fae5;color:#065f46;letter-spacing:.04em;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                            Active
+                        </span>
+                    <?php endif; ?>
+                </td>
+                <td>
+                    <?php if ($isSuspended): ?>
+                    <form method="POST" style="display:inline;">
                         <input type="hidden" name="target_client_id" value="<?= (int)$cli['UserID'] ?>">
-                        <button type="submit" name="reset_client_pw" class="admin-btn admin-btn-outline admin-btn-sm">Reset Password</button>
+                        <input type="hidden" name="toggle_suspend" value="1">
+                        <button type="submit" name="do_unsuspend" class="admin-btn admin-btn-outline admin-btn-sm"
+                                style="color:#059669;border-color:#bbf7d0;"
+                                onclick="return confirm('Re-enable login for <?= htmlspecialchars(addslashes($fullName)) ?>?')">Unsuspend</button>
                     </form>
+                    <?php else: ?>
+                    <form method="POST" style="display:inline;">
+                        <input type="hidden" name="target_client_id" value="<?= (int)$cli['UserID'] ?>">
+                        <input type="hidden" name="toggle_suspend" value="1">
+                        <button type="submit" name="do_suspend" class="admin-btn admin-btn-outline admin-btn-sm"
+                                style="color:#d97706;border-color:#fde68a;"
+                                onclick="return confirm('Suspend <?= htmlspecialchars(addslashes($fullName)) ?>? They will be blocked from logging in.')">Suspend</button>
+                    </form>
+                    <?php endif; ?>
                 </td>
             </tr>
             <?php endwhile; ?>

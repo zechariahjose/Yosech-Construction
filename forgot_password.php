@@ -239,7 +239,7 @@ if ($step === 'form' && $token !== '') {
                 <a href="<?= htmlspecialchars($success) ?>" id="resetLink"><?= htmlspecialchars($success) ?></a>
             </div>
             <button type="button" class="fp-btn" style="margin-bottom:16px;"
-                    onclick="navigator.clipboard.writeText('<?= htmlspecialchars($success) ?>').then(()=>{this.textContent='✓ Copied!';setTimeout(()=>{this.innerHTML='Copy Link';},2000})">
+                    onclick="navigator.clipboard.writeText(this.dataset.url).then(function(){var b=document.getElementById('copyBtn');b.textContent='\u2713 Copied!';setTimeout(function(){b.textContent='Copy Link';},2000);})" id="copyBtn" data-url="<?= htmlspecialchars($success) ?>">
                 Copy Link
             </button>
             <a href="<?= htmlspecialchars($success) ?>" class="fp-btn" style="text-decoration:none;margin-bottom:0;">

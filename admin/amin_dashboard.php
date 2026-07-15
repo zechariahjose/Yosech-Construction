@@ -9,12 +9,16 @@ $adminPendingCount = (int) mysqli_fetch_assoc(mysqli_query($conn,
     "SELECT COUNT(*) AS total FROM Application WHERE Status = 'Pending'"))['total'];
 
 // ── OPERATIONAL KPIs ────────────────────────────────────────
+// Total projects = internal (not published to showcase) + all showcase entries
 $totalProjects = (int) mysqli_fetch_assoc(mysqli_query($conn,
-    "SELECT (SELECT COUNT(*) FROM Project) + (SELECT COUNT(*) FROM ProjectShowcase) AS total"))['total'];
+    "SELECT
+        (SELECT COUNT(*) FROM Project p WHERE NOT EXISTS (SELECT 1 FROM ProjectShowcase ps WHERE ps.ProjectID = p.ProjectID))
+        + (SELECT COUNT(*) FROM ProjectShowcase) AS total"))['total'];
 
 $activeProjects = (int) mysqli_fetch_assoc(mysqli_query($conn,
-    "SELECT (SELECT COUNT(*) FROM Project WHERE ProjectStatus='Ongoing') +
-            (SELECT COUNT(*) FROM ProjectShowcase WHERE Status='Ongoing') AS total"))['total'];
+    "SELECT
+        (SELECT COUNT(*) FROM Project p WHERE p.ProjectStatus='Ongoing' AND NOT EXISTS (SELECT 1 FROM ProjectShowcase ps WHERE ps.ProjectID = p.ProjectID))
+        + (SELECT COUNT(*) FROM ProjectShowcase WHERE Status='Ongoing') AS total"))['total'];
 
 $equipmentUtilization = adminEquipmentUtilization($conn);
 $complianceScore = adminComplianceScore($conn);
