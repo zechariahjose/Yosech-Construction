@@ -20,7 +20,7 @@ if ($isClient) {
 $equipmentOfferings = [];
 $equipmentResult = mysqli_query(
     $conn,
-    "SELECT eo.*, e.EquipmentID AS LinkedEquipmentID, e.AvailabilityStatus AS FleetStatus
+    "SELECT eo.*, e.EquipmentID AS LinkedEquipmentID
      FROM EquipmentOffering eo
      LEFT JOIN Equipment e ON e.EquipmentOfferingID = eo.EquipmentOfferingID
      ORDER BY eo.Name ASC"
@@ -29,6 +29,25 @@ while ($row = mysqli_fetch_assoc($equipmentResult)) {
     $equipmentOfferings[] = $row;
 }
 
+// Build a map of approved booking windows per equipment offering
+// Used for date-based conflict detection (replaces the broken static FleetStatus check)
+$bookingsMap = [];
+$bQuery = mysqli_query($conn,
+    "SELECT eq.EquipmentOfferingID, a.RentalStartDate, a.RentalEndDate
+     FROM Application a
+     JOIN Equipment eq ON a.EquipmentID = eq.EquipmentID
+     WHERE a.Status = 'Approved'
+       AND a.ApplicationType = 'Equipment Rental'
+       AND a.RentalEndDate >= CURDATE()"
+);
+if ($bQuery) {
+    while ($b = mysqli_fetch_assoc($bQuery)) {
+        $oid = (int) $b['EquipmentOfferingID'];
+        $bookingsMap[$oid][] = [$b['RentalStartDate'], $b['RentalEndDate']];
+    }
+}
+$bookingsJson = json_encode((object) $bookingsMap, JSON_UNESCAPED_UNICODE);
+
 function applyFieldValue(array $pending, string $key, $fallback = '')
 {
     return htmlspecialchars($pending[$key] ?? $fallback, ENT_QUOTES, 'UTF-8');
@@ -36,13 +55,16 @@ function applyFieldValue(array $pending, string $key, $fallback = '')
 
 function isEquipmentAvailable(array $offering): bool
 {
-    if ($offering['AvailabilityStatus'] !== 'Available') {
-        return false;
-    }
-    if (!empty($offering['FleetStatus']) && $offering['FleetStatus'] !== 'Available') {
-        return false;
-    }
-    return true;
+    // Only check the offering's own permanent availability status.
+    // Date-based conflicts (e.g. currently rented to someone) are handled
+    // separately via the $bookingsMap date-overlap check.
+    return $offering['AvailabilityStatus'] === 'Available';
+}
+
+// Helper: do two date ranges overlap? [s1,e1] overlaps [s2,e2] iff s1<=e2 AND s2<=e1
+function rentalDatesConflict(string $s1, string $e1, string $s2, string $e2): bool
+{
+    return $s1 <= $e2 && $s2 <= $e1;
 }
 
 if (isset($_POST['submit'])) {
@@ -73,35 +95,53 @@ if (isset($_POST['submit'])) {
         if (!$selectedOffering) {
             $message = 'Please select equipment from the fleet.';
         } elseif (!isEquipmentAvailable($selectedOffering)) {
-            $message = 'The selected equipment is not available for rental right now. Please choose another item or check back later.';
+            $message = 'This equipment is not currently offered for rental. Please choose another item.';
         } elseif ($rentalStart === '' || $rentalEnd === '') {
             $message = 'Please provide the rental start and end dates.';
         } elseif ($rentalEnd < $rentalStart) {
             $message = 'Rental end date must be on or after the start date.';
         } else {
-            $equipmentId = !empty($selectedOffering['LinkedEquipmentID']) ? (int) $selectedOffering['LinkedEquipmentID'] : 'NULL';
-            $escType = mysqli_real_escape_string($conn, $applicationType);
+            // ── Server-side date-overlap check ──────────────────────────────
             $escStart = mysqli_real_escape_string($conn, $rentalStart);
-            $escEnd = mysqli_real_escape_string($conn, $rentalEnd);
-            $rentalSummary = "Equipment rental request: {$selectedOffering['Name']}";
-            if ($description !== '') {
-                $rentalSummary .= "\n\n{$description}";
-            }
-            $escRentalSummary = mysqli_real_escape_string($conn, $rentalSummary);
+            $escEnd   = mysqli_real_escape_string($conn, $rentalEnd);
 
-            $sql = "INSERT INTO Application (
-                        UserID, EquipmentID, ApplicationType, Description,
-                        RentalStartDate, RentalEndDate, NeedsOperator, SubmissionDate, Status
-                    ) VALUES (
-                        {$userId}, {$equipmentId}, '{$escType}', '{$escRentalSummary}',
-                        '{$escStart}', '{$escEnd}', {$needsOperator}, CURDATE(), 'Pending'
-                    )";
+            $conflictQuery = mysqli_query($conn,
+                "SELECT a.ApplicationID
+                 FROM Application a
+                 JOIN Equipment eq ON a.EquipmentID = eq.EquipmentID
+                 WHERE eq.EquipmentOfferingID = {$offeringId}
+                   AND a.Status = 'Approved'
+                   AND a.ApplicationType = 'Equipment Rental'
+                   AND a.RentalStartDate <= '{$escEnd}'
+                   AND a.RentalEndDate   >= '{$escStart}'
+                 LIMIT 1"
+            );
 
-            if (mysqli_query($conn, $sql)) {
-                $success = 'Your equipment rental application has been submitted. We will review your request and notify you once it is approved.';
-                unset($_SESSION['pending_application']);
+            if ($conflictQuery && mysqli_num_rows($conflictQuery) > 0) {
+                $message = 'This equipment is already reserved during those dates. Please choose different dates or select another piece of equipment.';
             } else {
-                $message = 'Unable to submit your application. Please try again or contact our office.';
+                $equipmentId     = !empty($selectedOffering['LinkedEquipmentID']) ? (int) $selectedOffering['LinkedEquipmentID'] : 'NULL';
+                $escType         = mysqli_real_escape_string($conn, $applicationType);
+                $rentalSummary   = "Equipment rental request: {$selectedOffering['Name']}";
+                if ($description !== '') {
+                    $rentalSummary .= "\n\n{$description}";
+                }
+                $escRentalSummary = mysqli_real_escape_string($conn, $rentalSummary);
+
+                $sql = "INSERT INTO Application (
+                            UserID, EquipmentID, ApplicationType, Description,
+                            RentalStartDate, RentalEndDate, NeedsOperator, SubmissionDate, Status
+                        ) VALUES (
+                            {$userId}, {$equipmentId}, '{$escType}', '{$escRentalSummary}',
+                            '{$escStart}', '{$escEnd}', {$needsOperator}, CURDATE(), 'Pending'
+                        )";
+
+                if (mysqli_query($conn, $sql)) {
+                    $success = 'Your equipment rental application has been submitted. We will review your request and notify you once it is approved.';
+                    unset($_SESSION['pending_application']);
+                } else {
+                    $message = 'Unable to submit your application. Please try again or contact our office.';
+                }
             }
         }
     } elseif ($applicationType === 'New Project') {
@@ -290,14 +330,14 @@ include("includes/navbar.php");
                             <select id="equipment_offering_id" name="equipment_offering_id">
                                 <option value="">Choose equipment…</option>
                                 <?php foreach ($equipmentOfferings as $offering): ?>
-                                    <?php $available = isEquipmentAvailable($offering); ?>
+                                    <?php $permanentlyAvailable = isEquipmentAvailable($offering); ?>
                                     <option value="<?= (int) $offering['EquipmentOfferingID'] ?>"
-                                        data-available="<?= $available ? '1' : '0' ?>"
+                                        data-permanent="<?= $permanentlyAvailable ? '1' : '0' ?>"
                                         data-status="<?= htmlspecialchars($offering['AvailabilityStatus']) ?>"
                                         <?= $selectedOfferingId === (int) $offering['EquipmentOfferingID'] ? 'selected' : '' ?>
-                                        <?= !$available ? 'disabled' : '' ?>>
+                                        <?= !$permanentlyAvailable ? 'disabled' : '' ?>>
                                         <?= htmlspecialchars($offering['Name']) ?><?= $offering['Model'] ? ' (' . htmlspecialchars($offering['Model']) . ')' : '' ?>
-                                        — <?= $available ? 'Available' : htmlspecialchars($offering['AvailabilityStatus']) ?>
+                                        <?= !$permanentlyAvailable ? '— ' . htmlspecialchars($offering['AvailabilityStatus']) : '' ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -421,11 +461,16 @@ include("includes/navbar.php");
 
 <script>
 (function () {
+    // Approved rental bookings from server: { offeringId: [[start, end], ...] }
+    var bookings = <?= $bookingsJson ?>;
+
     var typeSelect       = document.getElementById('application_type');
     var equipmentSection = document.getElementById('equipment-section');
     var projectSection   = document.getElementById('project-section');
     var equipmentSelect  = document.getElementById('equipment_offering_id');
     var availabilityNote = document.getElementById('equipmentAvailabilityNote');
+    var startInput       = document.getElementById('rental_start_date');
+    var endInput         = document.getElementById('rental_end_date');
     var submitButton     = document.getElementById('submitApplication');
 
     var equipmentFields = ['equipment_offering_id', 'rental_start_date', 'rental_end_date'];
@@ -438,23 +483,58 @@ include("includes/navbar.php");
         });
     }
 
+    // Check if two date ranges overlap: [s1,e1] overlaps [s2,e2] iff s1<=e2 AND s2<=e1
+    function datesOverlap(s1, e1, s2, e2) {
+        return s1 <= e2 && s2 <= e1;
+    }
+
     function updateEquipmentNote() {
         if (!equipmentSelect || !availabilityNote) return;
+
         var option = equipmentSelect.options[equipmentSelect.selectedIndex];
+
+        // Nothing selected
         if (!option || !option.value) {
             availabilityNote.textContent = '';
-            availabilityNote.className = 'ap-field-note';
+            availabilityNote.className   = 'ap-field-note';
             submitButton.disabled = false;
             return;
         }
-        if (option.dataset.available === '1') {
-            availabilityNote.textContent = 'This equipment is available for rental.';
-            availabilityNote.className = 'ap-field-note ap-field-note-success';
-            submitButton.disabled = false;
-        } else {
-            availabilityNote.textContent = 'This equipment is currently ' + option.dataset.status + ' and cannot be submitted.';
-            availabilityNote.className = 'ap-field-note ap-field-note-error';
+
+        // Permanently unavailable at the offering level (e.g. retired equipment)
+        if (option.dataset.permanent === '0') {
+            availabilityNote.textContent = 'This equipment is ' + option.dataset.status + ' and is not available for rental.';
+            availabilityNote.className   = 'ap-field-note ap-field-note-error';
             submitButton.disabled = true;
+            return;
+        }
+
+        var oid   = parseInt(option.value, 10);
+        var start = startInput  ? startInput.value  : '';
+        var end   = endInput    ? endInput.value    : '';
+
+        // Dates not yet selected — show neutral prompt
+        if (!start || !end) {
+            availabilityNote.textContent = 'Select your rental dates above to check availability.';
+            availabilityNote.className   = 'ap-field-note';
+            submitButton.disabled = false;
+            return;
+        }
+
+        // Check date overlap against existing approved bookings
+        var windows  = bookings[oid] || [];
+        var conflict = windows.some(function (w) {
+            return datesOverlap(start, end, w[0], w[1]);
+        });
+
+        if (conflict) {
+            availabilityNote.textContent = 'This equipment is already reserved during the selected dates. Please choose different dates or select another piece of equipment.';
+            availabilityNote.className   = 'ap-field-note ap-field-note-error';
+            submitButton.disabled = true;
+        } else {
+            availabilityNote.textContent = 'This equipment is available for the selected dates.';
+            availabilityNote.className   = 'ap-field-note ap-field-note-success';
+            submitButton.disabled = false;
         }
     }
 
@@ -473,6 +553,8 @@ include("includes/navbar.php");
 
     typeSelect.addEventListener('change', toggleSections);
     if (equipmentSelect) equipmentSelect.addEventListener('change', updateEquipmentNote);
+    if (startInput)      startInput.addEventListener('change', updateEquipmentNote);
+    if (endInput)        endInput.addEventListener('change', updateEquipmentNote);
     toggleSections();
 })();
 </script>

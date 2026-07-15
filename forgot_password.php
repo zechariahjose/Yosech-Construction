@@ -1,8 +1,18 @@
 <?php
 include("config/database.php");
-include("includes/header.php");
-include("includes/navbar.php");
 include("includes/password_helpers.php");
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (!defined('BASE_URL')) {
+    $scriptPath = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
+    $appBase    = preg_replace('#/(admin|manager)$#', '', $scriptPath);
+    $appBase    = rtrim($appBase, '/');
+    if ($appBase === '') $appBase = '/';
+    define('BASE_URL', $appBase);
+}
 
 // Redirect if already logged in
 if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'Client') {
@@ -387,4 +397,4 @@ function toggleFpPw(id, btn) {
 </script>
 </body>
 </html>
-<?php include("includes/footer.php"); ?>
+
