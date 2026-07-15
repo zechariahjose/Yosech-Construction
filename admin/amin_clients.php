@@ -11,6 +11,18 @@ $adminPendingCount = (int) mysqli_fetch_assoc(mysqli_query($conn,
 $success = '';
 $error   = '';
 
+// ── SUSPEND / UNSUSPEND CLIENT ─────────────────────────────
+if (isset($_POST['toggle_suspend'], $_POST['client_id'])) {
+    $cid      = (int) $_POST['client_id'];
+    $newState = isset($_POST['suspend']) ? 1 : 0;
+    $label    = $newState ? 'suspended' : 're-enabled';
+    $st = mysqli_prepare($conn, "UPDATE Client SET is_suspended = ? WHERE UserID = ?");
+    mysqli_stmt_bind_param($st, "ii", $newState, $cid);
+    mysqli_stmt_execute($st)
+        ? $success = "Client account #$cid has been {$label}."
+        : $error   = "Failed to update account status.";
+}
+
 // ── DELETE CLIENT ───────────────────────────────────────────
 if (isset($_POST['delete_client'], $_POST['client_id'])) {
     $cid = (int) $_POST['client_id'];
@@ -42,14 +54,22 @@ $onlineClients   = $hasLastActive
         "SELECT COUNT(*) AS t FROM Client WHERE last_active >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)"))['t']
     : null;
 
+// Check if is_suspended column exists (migration guard)
+$hasSuspended = (bool) mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Client' AND COLUMN_NAME='is_suspended'"
+));
+
 // ── BUILD QUERY ─────────────────────────────────────────────
 $searchQuery = trim($_GET['q'] ?? '');
 $lastActiveSel = $hasLastActive ? ', c.last_active' : ', NULL AS last_active';
 
+$suspendedSel = $hasSuspended ? ', c.is_suspended' : ', 0 AS is_suspended';
+
 $sql = "
     SELECT c.UserID, c.Client_FirstName, c.Client_MI, c.Client_LastName,
            c.Client_Username, c.Client_Email, c.Client_ContactNumber
-           {$lastActiveSel},
+           {$lastActiveSel} {$suspendedSel},
            (SELECT COUNT(*) FROM Application a WHERE a.UserID = c.UserID)                                        AS application_count,
            (SELECT COUNT(*) FROM Application a WHERE a.UserID = c.UserID AND a.Status = 'Approved')              AS approved_count,
            (SELECT COUNT(*) FROM Application a WHERE a.UserID = c.UserID AND a.Status = 'Rejected')              AS rejected_count,
@@ -210,6 +230,9 @@ include("../includes/admin/layout_start.php");
                             <?php endif; ?>
                             <div>
                                 <span class="admin-table-project"><?= htmlspecialchars($fullName) ?></span>
+                                <?php if (!empty($client['is_suspended'])): ?>
+                                    <span style="display:inline-block;font-size:0.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:#fee2e2;color:#991b1b;margin-left:4px;">Suspended</span>
+                                <?php endif; ?>
                                 <span class="admin-table-sub">@<?= htmlspecialchars($client['Client_Username']) ?> · #<?= (int)$client['UserID'] ?></span>
                             </div>
                         </div>
@@ -250,6 +273,25 @@ include("../includes/admin/layout_start.php");
                     </td>
                     <?php endif; ?>
                     <td>
+                        <!-- Suspend / Unsuspend -->
+                        <?php if (!empty($client['is_suspended'])): ?>
+                        <form method="POST" style="display:inline;">
+                            <input type="hidden" name="client_id" value="<?= (int)$client['UserID'] ?>">
+                            <input type="hidden" name="toggle_suspend" value="1">
+                            <button type="submit" name="unsuspend" class="admin-btn admin-btn-outline admin-btn-sm"
+                                    style="color:#059669;border-color:#bbf7d0;"
+                                    onclick="return confirm('Re-enable access for <?= htmlspecialchars(addslashes($fullName)) ?>?')">Unsuspend</button>
+                        </form>
+                        <?php else: ?>
+                        <form method="POST" style="display:inline;">
+                            <input type="hidden" name="client_id" value="<?= (int)$client['UserID'] ?>">
+                            <input type="hidden" name="toggle_suspend" value="1">
+                            <button type="submit" name="suspend" class="admin-btn admin-btn-outline admin-btn-sm"
+                                    style="color:#d97706;border-color:#fde68a;"
+                                    onclick="return confirm('Suspend <?= htmlspecialchars(addslashes($fullName)) ?>? They will be unable to log in until unsuspended.')">Suspend</button>
+                        </form>
+                        <?php endif; ?>
+
                         <button type="button"
                                 class="admin-btn admin-btn-outline admin-btn-sm"
                                 onclick="document.getElementById('delModal_<?= (int)$client['UserID'] ?>').style.display='flex'"

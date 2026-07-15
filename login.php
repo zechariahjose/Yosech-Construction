@@ -81,12 +81,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = mysqli_fetch_assoc($result);
             $hash = $user['Client_Password'] ?? $user['Password'] ?? '';
             if (password_verify($password, $hash) || $hash === $password) {
-                $_SESSION['user_id']   = $user['UserID'];
-                $_SESSION['user_type'] = 'Client';
-                $_SESSION['username']  = $user['Client_Username'] ?? $user['Username'] ?? $username;
-                $_SESSION['user_name'] = trim(($user['Client_FirstName'] ?? '') . ' ' . ($user['Client_LastName'] ?? ''));
-                header('Location: ' . loginRedirectTarget($redirect !== '' ? $redirect : 'index.php'));
-                exit;
+                // Block suspended accounts before setting session
+                if (!empty($user['is_suspended'])) {
+                    $error = 'Your account has been suspended. Please contact us for assistance.';
+                } else {
+                    $_SESSION['user_id']   = $user['UserID'];
+                    $_SESSION['user_type'] = 'Client';
+                    $_SESSION['username']  = $user['Client_Username'] ?? $user['Username'] ?? $username;
+                    $_SESSION['user_name'] = trim(($user['Client_FirstName'] ?? '') . ' ' . ($user['Client_LastName'] ?? ''));
+                    header('Location: ' . loginRedirectTarget($redirect !== '' ? $redirect : 'index.php'));
+                    exit;
+                }
             }
         }
 
@@ -152,7 +157,7 @@ if (isset($_GET['error'])) $error = 'Invalid username or password. If you don\'t
                 <div class="login-field">
                     <div class="login-field-row">
                         <label for="password">PASSWORD</label>
-                        <!-- <a href="#" class="login-forgot">Forgot Password?</a> -->
+                        <a href="<?= BASE_URL ?>/forgot_password.php" class="login-forgot">Forgot Password?</a>
                     </div>
                     <div class="login-password-wrap">
                         <input type="password" id="password" name="password" required autocomplete="current-password">
