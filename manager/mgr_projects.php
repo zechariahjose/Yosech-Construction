@@ -87,23 +87,29 @@ if (isset($_POST['publish_to_website'], $_POST['project_id'])) {
                     ? "'" . mysqli_real_escape_string($conn, $projRow['EndDate']) . "'"
                     : 'NULL';
 
-                // Check if already on website
+                // Check if already on website — look up by linked ProjectID first, fallback to title
                 $exists = mysqli_fetch_assoc(mysqli_query($conn,
-                    "SELECT ProjectShowcaseID FROM ProjectShowcase WHERE Title='{$pubTitle}' LIMIT 1"
+                    "SELECT ProjectShowcaseID FROM ProjectShowcase WHERE ProjectID = {$pubId} LIMIT 1"
                 ));
+                if (!$exists) {
+                    // Fallback: check by title for legacy records created without ProjectID
+                    $exists = mysqli_fetch_assoc(mysqli_query($conn,
+                        "SELECT ProjectShowcaseID FROM ProjectShowcase WHERE Title='{$pubTitle}' AND (ProjectID IS NULL OR ProjectID = {$pubId}) LIMIT 1"
+                    ));
+                }
 
                 if ($exists) {
                     $scID = (int) $exists['ProjectShowcaseID'];
                     mysqli_query($conn,
-                        "UPDATE ProjectShowcase SET Summary='{$pubSummary}', Status='{$pubStatus}',
-                         StartDate={$startVal}, EndDate={$endVal}, ImageURL='{$escImg}'
+                        "UPDATE ProjectShowcase SET Title='{$pubTitle}', Summary='{$pubSummary}', Status='{$pubStatus}',
+                         StartDate={$startVal}, EndDate={$endVal}, ImageURL='{$escImg}', ProjectID={$pubId}
                          WHERE ProjectShowcaseID={$scID}"
                     );
                     $successMsg = "Website showcase updated.";
                 } else {
                     mysqli_query($conn,
-                        "INSERT INTO ProjectShowcase (Title, Summary, StartDate, EndDate, Status, ImageURL)
-                         VALUES ('{$pubTitle}', '{$pubSummary}', {$startVal}, {$endVal}, '{$pubStatus}', '{$escImg}')"
+                        "INSERT INTO ProjectShowcase (ProjectID, Title, Summary, StartDate, EndDate, Status, ImageURL)
+                         VALUES ({$pubId}, '{$pubTitle}', '{$pubSummary}', {$startVal}, {$endVal}, '{$pubStatus}', '{$escImg}')"
                     );
                     $successMsg = "Project published to website successfully.";
                 }
@@ -361,6 +367,8 @@ while ($row = mysqli_fetch_assoc($showcaseResult)) {
 }
 
 // ── FETCH INTERNAL PROJECTS — Ongoing only ─────────────────
+// Exclude projects already published to the website showcase to avoid duplicates
+// Matches by ProjectID link (new) OR by title (legacy/seed data with NULL ProjectID)
 $internalActiveResult = mysqli_query($conn,
     "SELECT p.*, a.ApplicationType, a.ProjectTitle, a.ProjectLocation,
             c.Client_FirstName, c.Client_LastName, c.Client_ContactNumber
@@ -368,6 +376,12 @@ $internalActiveResult = mysqli_query($conn,
      JOIN Application a ON p.ApplicationID = a.ApplicationID
      JOIN Client c ON a.UserID = c.UserID
      WHERE p.ProjectStatus = 'Ongoing'
+       AND p.ProjectID NOT IN (
+           SELECT ps.ProjectID FROM ProjectShowcase ps WHERE ps.ProjectID IS NOT NULL
+       )
+       AND a.ProjectTitle NOT IN (
+           SELECT ps.Title FROM ProjectShowcase ps WHERE ps.ProjectID IS NULL
+       )
      ORDER BY p.ProjectID DESC"
 );
 $internalActiveRows = [];
@@ -377,6 +391,7 @@ while ($row = mysqli_fetch_assoc($internalActiveResult)) {
 }
 
 // ── FETCH INTERNAL PROJECTS — Non-ongoing ──────────────────
+// Also exclude published projects to avoid duplicates
 $internalRestResult = mysqli_query($conn,
     "SELECT p.*, a.ApplicationType, a.ProjectTitle, a.ProjectLocation,
             c.Client_FirstName, c.Client_LastName, c.Client_ContactNumber
@@ -384,6 +399,12 @@ $internalRestResult = mysqli_query($conn,
      JOIN Application a ON p.ApplicationID = a.ApplicationID
      JOIN Client c ON a.UserID = c.UserID
      WHERE p.ProjectStatus != 'Ongoing'
+       AND p.ProjectID NOT IN (
+           SELECT ps.ProjectID FROM ProjectShowcase ps WHERE ps.ProjectID IS NOT NULL
+       )
+       AND a.ProjectTitle NOT IN (
+           SELECT ps.Title FROM ProjectShowcase ps WHERE ps.ProjectID IS NULL
+       )
      ORDER BY FIELD(p.ProjectStatus,'On Hold','Completed','Cancelled'), p.ProjectID DESC"
 );
 $internalRestRows = [];
@@ -398,17 +419,41 @@ $activeRows = array_merge($showcaseActive, $internalActiveRows);
 $allRows    = array_merge($showcaseRest, $internalRestRows);
 
 // ── KPI COUNTS ─────────────────────────────────────────────
-$kpiTotal = (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM Project"))[0]
-          + (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM ProjectShowcase"))[0];
+// Total = internal unpublished projects + all showcase projects (published ones move from internal to showcase)
+$kpiTotal = (int) mysqli_fetch_row(mysqli_query($conn,
+    "SELECT COUNT(*) FROM Project p
+     JOIN Application a ON p.ApplicationID = a.ApplicationID
+     WHERE p.ProjectID NOT IN (SELECT ps.ProjectID FROM ProjectShowcase ps WHERE ps.ProjectID IS NOT NULL)
+       AND a.ProjectTitle NOT IN (SELECT ps.Title FROM ProjectShowcase ps WHERE ps.ProjectID IS NULL)"
+))[0]
++ (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM ProjectShowcase"))[0];
 
-$kpiOngoing = (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM Project WHERE ProjectStatus='Ongoing'"))[0]
-            + (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM ProjectShowcase WHERE Status='Ongoing'"))[0];
+$kpiOngoing = (int) mysqli_fetch_row(mysqli_query($conn,
+    "SELECT COUNT(*) FROM Project p
+     JOIN Application a ON p.ApplicationID = a.ApplicationID
+     WHERE p.ProjectStatus='Ongoing'
+       AND p.ProjectID NOT IN (SELECT ps.ProjectID FROM ProjectShowcase ps WHERE ps.ProjectID IS NOT NULL)
+       AND a.ProjectTitle NOT IN (SELECT ps.Title FROM ProjectShowcase ps WHERE ps.ProjectID IS NULL)"
+))[0]
++ (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM ProjectShowcase WHERE Status='Ongoing'"))[0];
 
-$kpiOnHold = (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM Project WHERE ProjectStatus='On Hold'"))[0]
-           + (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM ProjectShowcase WHERE Status='On Hold'"))[0];
+$kpiOnHold = (int) mysqli_fetch_row(mysqli_query($conn,
+    "SELECT COUNT(*) FROM Project p
+     JOIN Application a ON p.ApplicationID = a.ApplicationID
+     WHERE p.ProjectStatus='On Hold'
+       AND p.ProjectID NOT IN (SELECT ps.ProjectID FROM ProjectShowcase ps WHERE ps.ProjectID IS NOT NULL)
+       AND a.ProjectTitle NOT IN (SELECT ps.Title FROM ProjectShowcase ps WHERE ps.ProjectID IS NULL)"
+))[0]
++ (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM ProjectShowcase WHERE Status='On Hold'"))[0];
 
-$kpiCompleted = (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM Project WHERE ProjectStatus='Completed'"))[0]
-              + (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM ProjectShowcase WHERE Status='Completed'"))[0];
+$kpiCompleted = (int) mysqli_fetch_row(mysqli_query($conn,
+    "SELECT COUNT(*) FROM Project p
+     JOIN Application a ON p.ApplicationID = a.ApplicationID
+     WHERE p.ProjectStatus='Completed'
+       AND p.ProjectID NOT IN (SELECT ps.ProjectID FROM ProjectShowcase ps WHERE ps.ProjectID IS NOT NULL)
+       AND a.ProjectTitle NOT IN (SELECT ps.Title FROM ProjectShowcase ps WHERE ps.ProjectID IS NULL)"
+))[0]
++ (int) mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM ProjectShowcase WHERE Status='Completed'"))[0];
 
 // ── SEARCH / FILTER PARAMS ──────────────────────────────────
 $statusFilter = $_GET['status'] ?? '';
@@ -537,11 +582,12 @@ include("../includes/manager/layout_start.php");
             <?php else: ?>
                 <?php
                 $status        = managerProjectStatusLabel($project['ProjectStatus']);
+                // Fetch all recent updates (not limited so the count chip is accurate)
                 $updatesResult = mysqli_query($conn,
                     "SELECT pu.*, e.Username FROM Project_Update pu
                      LEFT JOIN Employee e ON pu.EmployeeID = e.EmployeeID
                      WHERE pu.ProjectID = " . (int) $project['ProjectID'] . "
-                     ORDER BY pu.UpdateDate DESC LIMIT 4"
+                     ORDER BY pu.UpdateDate DESC"
                 );
                 ?>
                 <?php include __DIR__ . '/../includes/manager/_project_card.php'; ?>

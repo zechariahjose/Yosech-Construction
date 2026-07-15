@@ -19,12 +19,21 @@ $alreadyStarted = (bool) mysqli_fetch_assoc(mysqli_query($conn,
 ));
 
 // Check if project has already been published to the website
+// Prefer lookup by ProjectID (reliable), fall back to title (legacy records)
 $publishedRow = mysqli_fetch_assoc(mysqli_query($conn,
     "SELECT ProjectShowcaseID, Title FROM ProjectShowcase
-     WHERE Title = '" . mysqli_real_escape_string($conn, $project['ProjectTitle'] ?? '') . "'
+     WHERE ProjectID = {$pId}
      LIMIT 1"
 ));
-$alreadyPublished  = !empty($publishedRow);
+if (!$publishedRow) {
+    // Legacy fallback: match by title for showcases created before ProjectID column was added
+    $publishedRow = mysqli_fetch_assoc(mysqli_query($conn,
+        "SELECT ProjectShowcaseID, Title FROM ProjectShowcase
+         WHERE (ProjectID IS NULL) AND Title = '" . mysqli_real_escape_string($conn, $project['ProjectTitle'] ?? '') . "'
+         LIMIT 1"
+    ));
+}
+$alreadyPublished    = !empty($publishedRow);
 $publishedShowcaseId = $alreadyPublished ? (int)$publishedRow['ProjectShowcaseID'] : null;
 ?>
 <div class="pj-item" id="pjItem_<?= $pId ?>">
@@ -105,7 +114,7 @@ $publishedShowcaseId = $alreadyPublished ? (int)$publishedRow['ProjectShowcaseID
                                 <option value="<?= $s ?>" <?= $project['ProjectStatus']===$s?'selected':'' ?>><?= $s ?></option>
                             <?php endforeach; ?>
                         </select>
-                        <button class="admin-btn admin-btn-primary admin-btn-sm" disabled>Save</button>
+                        <button type="submit" class="admin-btn admin-btn-primary admin-btn-sm" disabled>Save</button>
                     </form>
                 </div>
 
@@ -161,7 +170,7 @@ $publishedShowcaseId = $alreadyPublished ? (int)$publishedRow['ProjectShowcaseID
                                 <option value="Pending"   <?= $upd['Status']==='Pending'  ?'selected':'' ?>>Pending Inspection</option>
                                 <option value="Approved"  <?= $upd['Status']==='Approved' ?'selected':'' ?>>Approved</option>
                             </select>
-                            <button class="admin-btn admin-btn-success admin-btn-sm" disabled>Update</button>
+                            <button type="submit" class="admin-btn admin-btn-success admin-btn-sm" disabled>Update</button>
                         </form>
                     </div>
                     <?php endwhile; ?>
