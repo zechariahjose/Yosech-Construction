@@ -139,10 +139,15 @@ $publishedShowcaseId = $alreadyPublished ? (int)$publishedRow['ProjectShowcaseID
                         <input type="hidden" name="project_id" value="<?= $pId ?>">
                         <input type="hidden" name="add_update" value="1">
                         <input type="hidden" name="update_status" value="Reviewed">
-                        <textarea name="update_description" rows="2"
-                                  placeholder="e.g. Foundation pour completed…" required></textarea>
+                        <textarea name="update_description" rows="2" id="updateDesc_<?= $pId ?>"
+                                  placeholder="e.g. Foundation pour completed… (this will be visible to the client)"
+                                  required oninput="document.getElementById('postUpdateBtn_<?= $pId ?>').disabled=this.value.trim()===''"></textarea>
                         <div class="pj-inline-form" style="margin-top:8px;">
-                            <button type="submit" class="admin-btn admin-btn-primary admin-btn-sm" disabled>Post Update</button>
+                            <button type="submit" id="postUpdateBtn_<?= $pId ?>"
+                                    class="admin-btn admin-btn-primary admin-btn-sm" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                                Post Update to Client
+                            </button>
                         </div>
                     </form>
                 </div>
