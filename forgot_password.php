@@ -95,14 +95,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_forgot'])) {
             );
 
             // Generate secure token
+            // NOTE: Use MySQL's NOW()+INTERVAL to avoid PHP↔MySQL timezone mismatch
             $rawToken = bin2hex(random_bytes(32)); // 64 hex chars
-            $expires  = date('Y-m-d H:i:s', time() + 3600); // 1 hour
 
             $ins = mysqli_prepare($conn,
                 "INSERT INTO password_reset_tokens (user_type, user_id, token, expires_at)
-                 VALUES ('Client', ?, ?, ?)"
+                 VALUES ('Client', ?, ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))"
             );
-            mysqli_stmt_bind_param($ins, "iss", $uid, $rawToken, $expires);
+            mysqli_stmt_bind_param($ins, "is", $uid, $rawToken);
             mysqli_stmt_execute($ins);
 
             // Build reset URL to display on screen
