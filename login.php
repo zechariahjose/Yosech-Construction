@@ -60,11 +60,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = mysqli_fetch_assoc($result);
             $hash = $user['Password'];
             if (password_verify($password, $hash) || $hash === $password) {
-                $_SESSION['user_id']   = $user['EmployeeID'];
-                $_SESSION['user_type'] = $user['UserType'];
-                $_SESSION['username']  = $user['Username'];
-                header('Location: ' . loginStaffRedirectTarget($redirect, $user['UserType']));
-                exit;
+                // Block suspended accounts
+                if (!empty($user['is_suspended'])) {
+                    $error = 'This account has been suspended. Please contact the administrator.';
+                } else {
+                    $_SESSION['user_id']   = $user['EmployeeID'];
+                    $_SESSION['user_type'] = $user['UserType'];
+                    $_SESSION['username']  = $user['Username'];
+                    header('Location: ' . loginStaffRedirectTarget($redirect, $user['UserType']));
+                    exit;
+                }
             }
         }
 

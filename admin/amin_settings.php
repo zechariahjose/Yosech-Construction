@@ -79,16 +79,38 @@ if (isset($_POST['add_employee'])) {
     }
 }
 
-// ── REMOVE EMPLOYEE ─────────────────────────────────────────
-if (isset($_POST['remove_employee'], $_POST['target_employee_id'])) {
-    $tid = (int) $_POST['target_employee_id'];
+// ── TOGGLE EMPLOYEE SUSPEND ────────────────────────────────
+if (isset($_POST['toggle_emp_suspend'], $_POST['target_employee_id'])) {
+    $tid      = (int) $_POST['target_employee_id'];
     if ($tid === $adminId) {
-        $error = 'You cannot remove your own account.';
+        $error = 'You cannot suspend your own account.';
     } else {
-        $del = mysqli_prepare($conn, "DELETE FROM Employee WHERE EmployeeID=?");
-        mysqli_stmt_bind_param($del, "i", $tid);
-        mysqli_stmt_execute($del) ? $success = 'Employee removed.' : $error = 'Failed to remove employee.';
+        $newState = isset($_POST['do_emp_suspend']) ? 1 : 0;
+        $label    = $newState ? 'suspended' : 're-enabled';
+
+        // Check if column exists first
+        $colCheck = mysqli_query($conn,
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Employee' AND COLUMN_NAME='is_suspended'"
+        );
+        if (mysqli_num_rows($colCheck) > 0) {
+            $st = mysqli_prepare($conn, "UPDATE Employee SET is_suspended = ? WHERE EmployeeID = ?");
+            mysqli_stmt_bind_param($st, "ii", $newState, $tid);
+            mysqli_stmt_execute($st)
+                ? $success = "Employee account has been {$label}."
+                : $error   = "Failed to update employee status.";
+        } else {
+            $error = "Run migration_employee_suspend.sql first to enable this feature.";
+        }
     }
+}
+
+// ── REMOVE EMPLOYEE — DISABLED ──────────────────────────────
+// Deletion of employee accounts is not permitted.
+// Accounts can only be suspended via the Client Access tab (clients)
+// or password-reset. Staff accounts are permanent records.
+if (isset($_POST['remove_employee'])) {
+    $error = 'Employee accounts cannot be deleted. Contact your system administrator if an account must be removed at the database level.';
 }
 
 // ── RESET EMPLOYEE PASSWORD (default: 123) ─────────────────
@@ -113,7 +135,17 @@ if (isset($_POST['toggle_suspend'], $_POST['target_client_id'])) {
 }
 
 // ── DATA ────────────────────────────────────────────────────
-$staffRows   = mysqli_query($conn, "SELECT EmployeeID,UserType,Username,Email,ContactNumber FROM Employee ORDER BY UserType,Username");
+// Check if Employee.is_suspended exists
+$empSuspendExists = (bool) mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Employee' AND COLUMN_NAME='is_suspended'"
+));
+
+$staffRows = mysqli_query($conn,
+    "SELECT EmployeeID, UserType, Username, Email, ContactNumber" .
+    ($empSuspendExists ? ", is_suspended" : ", 0 AS is_suspended") .
+    " FROM Employee ORDER BY UserType, Username"
+);
 $clientRows  = mysqli_query($conn, "SELECT UserID,Client_FirstName,Client_MI,Client_LastName,Client_Username,Client_Email,is_suspended FROM Client ORDER BY Client_LastName,Client_FirstName");
 $staffCount  = (int) mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) AS t FROM Employee"))['t'];
 $clientCount = (int) mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) AS t FROM Client"))['t'];
@@ -299,31 +331,82 @@ include("../includes/admin/layout_start.php");
             <h2 class="admin-panel-title">Current Staff</h2>
             <span class="admin-badge admin-badge-track"><?= $staffCount ?> accounts</span>
         </div>
+        <?php if (!$empSuspendExists): ?>
+            <div class="admin-alert admin-alert-info" style="margin:16px 20px;">
+                Run <strong>config/migration_employee_suspend.sql</strong> in phpMyAdmin to enable Suspend/Unsuspend.
+            </div>
+        <?php endif; ?>
         <table class="admin-table">
-            <thead><tr><th>Username</th><th>Role</th><th>Email</th><th>Contact</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Username</th><th>Role</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
             <?php
-            $staffRows = mysqli_query($conn, "SELECT EmployeeID,UserType,Username,Email,ContactNumber FROM Employee ORDER BY UserType,Username");
-            while ($emp = mysqli_fetch_assoc($staffRows)):
-                $isMe = (int)$emp['EmployeeID'] === $adminId;
-                $roleClass = $emp['UserType'] === 'Admin' ? 'admin-badge-pending' : 'admin-badge-track';
+            // Re-fetch with is_suspended
+            $staffRowsFresh = mysqli_query($conn,
+                "SELECT EmployeeID, UserType, Username, Email, ContactNumber" .
+                ($empSuspendExists ? ", is_suspended" : ", 0 AS is_suspended") .
+                " FROM Employee ORDER BY UserType, Username"
+            );
+            while ($emp = mysqli_fetch_assoc($staffRowsFresh)):
+                $isMe         = (int)$emp['EmployeeID'] === $adminId;
+                $isSuspended  = !empty($emp['is_suspended']);
+                $roleClass    = $emp['UserType'] === 'Admin' ? 'admin-badge-pending' : 'admin-badge-track';
             ?>
             <tr>
-                <td><span class="admin-table-project"><?= htmlspecialchars($emp['Username']) ?></span><?php if ($isMe): ?><span class="admin-table-sub">You</span><?php endif; ?></td>
+                <td>
+                    <span class="admin-table-project"><?= htmlspecialchars($emp['Username']) ?></span>
+                    <?php if ($isMe): ?><span class="admin-table-sub">You</span><?php endif; ?>
+                </td>
                 <td><span class="admin-badge <?= $roleClass ?>"><?= htmlspecialchars($emp['UserType']) ?></span></td>
                 <td><?= htmlspecialchars($emp['Email']) ?></td>
-                <td><?= htmlspecialchars($emp['ContactNumber'] ?: '—') ?></td>
+                <td>
+                    <?php if ($isSuspended): ?>
+                        <span style="display:inline-flex;align-items:center;gap:4px;font-size:0.7rem;font-weight:700;padding:3px 9px;border-radius:20px;background:#fee2e2;color:#991b1b;letter-spacing:.04em;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg>
+                            Suspended
+                        </span>
+                    <?php else: ?>
+                        <span style="display:inline-flex;align-items:center;gap:4px;font-size:0.7rem;font-weight:700;padding:3px 9px;border-radius:20px;background:#d1fae5;color:#065f46;letter-spacing:.04em;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                            Active
+                        </span>
+                    <?php endif; ?>
+                </td>
                 <td>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                        <form method="POST" style="display:inline;" onsubmit="return confirm('Reset password for <?= htmlspecialchars(addslashes($emp['Username'])) ?> to the default (123)? They should change it immediately after logging in.');">
+                        <!-- Reset password -->
+                        <form method="POST" style="display:inline;"
+                              onsubmit="return confirm('Reset password for <?= htmlspecialchars(addslashes($emp['Username'])) ?> to 123?');">
                             <input type="hidden" name="target_employee_id" value="<?= (int)$emp['EmployeeID'] ?>">
-                            <button type="submit" name="reset_employee_pw" class="admin-btn admin-btn-outline admin-btn-sm">Reset to Default</button>
+                            <button type="submit" name="reset_employee_pw" class="admin-btn admin-btn-outline admin-btn-sm">
+                                Reset Password
+                            </button>
                         </form>
+
                         <?php if (!$isMe): ?>
-                        <form method="POST" style="display:inline;" onsubmit="return confirm('Remove <?= htmlspecialchars(addslashes($emp['Username'])) ?>? This cannot be undone.');">
+                        <!-- Suspend / Unsuspend -->
+                        <?php if ($isSuspended): ?>
+                        <form method="POST" style="display:inline;"
+                              onsubmit="return confirm('Re-enable login for <?= htmlspecialchars(addslashes($emp['Username'])) ?>?');">
                             <input type="hidden" name="target_employee_id" value="<?= (int)$emp['EmployeeID'] ?>">
-                            <button type="submit" name="remove_employee" class="admin-btn admin-btn-danger admin-btn-sm">Remove</button>
+                            <input type="hidden" name="toggle_emp_suspend" value="1">
+                            <button type="submit" name="do_emp_unsuspend"
+                                    class="admin-btn admin-btn-outline admin-btn-sm"
+                                    style="color:#059669;border-color:#a7f3d0;">
+                                Unsuspend
+                            </button>
                         </form>
+                        <?php else: ?>
+                        <form method="POST" style="display:inline;"
+                              onsubmit="return confirm('Suspend <?= htmlspecialchars(addslashes($emp['Username'])) ?>? They will be blocked from logging in.');">
+                            <input type="hidden" name="target_employee_id" value="<?= (int)$emp['EmployeeID'] ?>">
+                            <input type="hidden" name="toggle_emp_suspend" value="1">
+                            <button type="submit" name="do_emp_suspend"
+                                    class="admin-btn admin-btn-outline admin-btn-sm"
+                                    style="color:#d97706;border-color:#fde68a;">
+                                Suspend
+                            </button>
+                        </form>
+                        <?php endif; ?>
                         <?php endif; ?>
                     </div>
                 </td>
