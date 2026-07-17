@@ -141,12 +141,30 @@ $scDetailId = 'detailShowcase_' . $scId;
                         </select>
                     </div>
                 </div>
-                <div class="pj-edit-actions">
-                    <button type="button" class="admin-btn admin-btn-outline admin-btn-sm"
-                            onclick="pjCloseEdit('<?= $scEditId ?>')">Cancel</button>
-                    <button type="submit" name="edit_showcase" class="admin-btn admin-btn-primary admin-btn-sm" disabled>
-                        Save Changes
-                    </button>
+                <div class="pj-edit-actions" style="justify-content:space-between;">
+                    <!-- Unpublish (left side, destructive) -->
+                    <form method="POST" style="margin:0;"
+                          onsubmit="return confirm('Remove this project from the public website? The project data will not be deleted — only the website listing will be removed.');">
+                        <input type="hidden" name="project_id" value="<?= (int)($project['ProjectID'] ?? 0) ?>">
+                        <input type="hidden" name="showcase_id" value="<?= $scId ?>">
+                        <button type="submit" name="unpublish_from_website"
+                                class="admin-btn admin-btn-danger admin-btn-sm"
+                                style="display:inline-flex;align-items:center;gap:5px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none"
+                                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                            Unpublish from Website
+                        </button>
+                    </form>
+                    <!-- Save / Cancel (right side) -->
+                    <div style="display:flex;gap:8px;">
+                        <button type="button" class="admin-btn admin-btn-outline admin-btn-sm"
+                                onclick="pjCloseEdit('<?= $scEditId ?>')">Cancel</button>
+                        <button type="submit" name="edit_showcase" class="admin-btn admin-btn-primary admin-btn-sm" disabled>
+                            Save Changes
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>

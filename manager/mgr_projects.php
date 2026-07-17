@@ -13,19 +13,21 @@ $errorMsg   = '';
 $reopenAddModal = false;
 
 // ── UNPUBLISH FROM WEBSITE ──────────────────────────────────
-if (isset($_POST['unpublish_from_website'], $_POST['showcase_id'], $_POST['project_id'])) {
+if (isset($_POST['unpublish_from_website'], $_POST['showcase_id'])) {
     $scDel  = (int) $_POST['showcase_id'];
-    $projId = (int) $_POST['project_id'];
+    $projId = (int) ($_POST['project_id'] ?? 0);
     if ($scDel > 0) {
         mysqli_query($conn, "DELETE FROM ProjectShowcase WHERE ProjectShowcaseID = {$scDel}");
 
-        // Notify client
-        $unpubMsg = mysqli_real_escape_string($conn,
-            "This project has been removed from the public website showcase.");
-        mysqli_query($conn,
-            "INSERT INTO Project_Update (ProjectID, EmployeeID, Status, Description, UpdateDate)
-             VALUES ({$projId}, {$employeeId}, 'Reviewed', '{$unpubMsg}', CURDATE())"
-        );
+        // Notify client only when a linked internal project exists
+        if ($projId > 0) {
+            $unpubMsg = mysqli_real_escape_string($conn,
+                "This project has been removed from the public website showcase.");
+            mysqli_query($conn,
+                "INSERT INTO Project_Update (ProjectID, EmployeeID, Status, Description, UpdateDate)
+                 VALUES ({$projId}, {$employeeId}, 'Reviewed', '{$unpubMsg}', CURDATE())"
+            );
+        }
         $successMsg = "Project removed from the website.";
     }
 }
