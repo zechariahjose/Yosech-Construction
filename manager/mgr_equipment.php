@@ -16,85 +16,85 @@ if (isset($_POST['add_equipment'])) {
     $name    = trim($_POST['eq_name']    ?? '');
     $model   = trim($_POST['eq_model']   ?? '');
     $desc    = trim($_POST['eq_description'] ?? '');
-    $specs   = trim($_POST['eq_specs']   ?? '');
     $hourly  = (float) ($_POST['eq_hourly']  ?? 0);
     $daily   = (float) ($_POST['eq_daily']   ?? 0);
     $weekly  = (float) ($_POST['eq_weekly']  ?? 0);
     $monthly = (float) ($_POST['eq_monthly'] ?? 0);
     $status  = $_POST['eq_availability'] ?? 'Available';
 
+    // Build specs from named array inputs (reliable server-side fallback)
+    $specParts = [];
+    $labels = $_POST['spec_label'] ?? [];
+    $values = $_POST['spec_value'] ?? [];
+    foreach ($labels as $i => $lbl) {
+        $lbl = trim($lbl);
+        $val = trim($values[$i] ?? '');
+        if ($lbl !== '' || $val !== '') {
+            $specParts[] = $lbl . ': ' . $val;
+        }
+    }
+    // Also accept the serialised hidden field if populated by JS
+    $specsHidden = trim($_POST['eq_specs'] ?? '');
+    $specs = !empty($specParts) ? implode(' · ', $specParts) : $specsHidden;
+
     if ($name === '') {
         $errorMsg = "Equipment name is required.";
         $reopenAddModal = true;
     } else {
-        // Handle photo upload
+        // Photo upload
         $imgPath = null;
         if (!empty($_FILES['eq_photo']['name'])) {
             $uploadDir = dirname(__DIR__) . '/assets/equipment/';
             if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
             $ext = strtolower(pathinfo($_FILES['eq_photo']['name'], PATHINFO_EXTENSION));
-            if (!in_array($ext, ['jpg','jpeg','png','webp'])) {
-                $errorMsg = "Invalid image format. Use JPG, PNG, or WEBP.";
-                $reopenAddModal = true;
-            } else {
+            if (in_array($ext, ['jpg','jpeg','png','webp'])) {
                 $filename = 'eq_' . time() . '_' . preg_replace('/[^a-z0-9]/', '', strtolower($name)) . '.' . $ext;
-                $destAbs  = $uploadDir . $filename;
-                if (move_uploaded_file($_FILES['eq_photo']['tmp_name'], $destAbs)) {
+                if (move_uploaded_file($_FILES['eq_photo']['tmp_name'], $uploadDir . $filename)) {
                     $imgPath = 'assets/equipment/' . $filename;
-                } else {
-                    $errorMsg = "Failed to upload image. Please try again.";
-                    $reopenAddModal = true;
                 }
             }
         }
 
-        if (!$errorMsg) {
-            $eName   = mysqli_real_escape_string($conn, $name);
-            $eModel  = mysqli_real_escape_string($conn, $model);
-            $eDesc   = mysqli_real_escape_string($conn, $desc);
-            $eSpecs  = mysqli_real_escape_string($conn, $specs);
-            $eStatus = mysqli_real_escape_string($conn, $status);
-            $eImg    = $imgPath ? "'" . mysqli_real_escape_string($conn, $imgPath) . "'" : 'NULL';
+        $eName   = mysqli_real_escape_string($conn, $name);
+        $eModel  = mysqli_real_escape_string($conn, $model);
+        $eDesc   = mysqli_real_escape_string($conn, $desc);
+        $eSpecs  = mysqli_real_escape_string($conn, $specs);
+        $eStatus = mysqli_real_escape_string($conn, $status);
+        $eImg    = $imgPath ? "'" . mysqli_real_escape_string($conn, $imgPath) . "'" : 'NULL';
 
-            // Check if DateAdded column exists
-            $hasDateAdded = (bool) mysqli_fetch_assoc(mysqli_query($conn,
-                "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-                 WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='EquipmentOffering' AND COLUMN_NAME='DateAdded'"
-            ));
+        // Check if DateAdded column exists
+        $hasDateAdded = (bool) mysqli_fetch_assoc(mysqli_query($conn,
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='EquipmentOffering' AND COLUMN_NAME='DateAdded'"
+        ));
+        $dateCol = $hasDateAdded ? ", DateAdded" : "";
+        $dateVal = $hasDateAdded ? ", NOW()" : "";
 
-            $dateAddedSql = $hasDateAdded ? ", DateAdded" : "";
-            $dateAddedVal = $hasDateAdded ? ", NOW()" : "";
+        $sql = "INSERT INTO EquipmentOffering
+                (Name, Model, Description, Specs, HourlyRate, DailyRate, WeeklyRate, MonthlyRate, AvailabilityStatus, ImageURL{$dateCol})
+                VALUES ('{$eName}', '{$eModel}', '{$eDesc}', '{$eSpecs}',
+                        {$hourly}, {$daily}, {$weekly}, {$monthly}, '{$eStatus}', {$eImg}{$dateVal})";
 
-            // Insert into EquipmentOffering (drives public website)
-            $insertResult = mysqli_query($conn,
-                "INSERT INTO EquipmentOffering
-                 (Name, Model, Description, Specs, HourlyRate, DailyRate, WeeklyRate, MonthlyRate, AvailabilityStatus, ImageURL{$dateAddedSql})
-                 VALUES ('{$eName}', '{$eModel}', '{$eDesc}', '{$eSpecs}',
-                         {$hourly}, {$daily}, {$weekly}, {$monthly}, '{$eStatus}', {$eImg}{$dateAddedVal})"
+        $result  = mysqli_query($conn, $sql);
+        $newEoId = $result ? (int) mysqli_insert_id($conn) : 0;
+
+        if ($newEoId > 0) {
+            $unitStatus = match($status) {
+                'Available'         => 'Available',
+                'Under Maintenance' => 'Under Maintenance',
+                default             => 'Rented',
+            };
+            $specStr = mysqli_real_escape_string($conn, $name . ($model ? " ({$model})" : ''));
+            mysqli_query($conn,
+                "INSERT INTO Equipment
+                 (EquipmentOfferingID, Specification, AvailabilityStatus, NeedsOperator, EquipmentPaymentStatus)
+                 VALUES ({$newEoId}, '{$specStr}', '{$unitStatus}', 0, 'Unpaid')"
             );
-            $newEoId = $insertResult ? (int) mysqli_insert_id($conn) : 0;
-
-            if ($newEoId > 0) {
-                // Insert matching Equipment unit
-                $unitStatus = match($status) {
-                    'Available'         => 'Available',
-                    'Under Maintenance' => 'Under Maintenance',
-                    default             => 'Rented',
-                };
-                $specStr = mysqli_real_escape_string($conn,
-                    $name . ($model ? " ({$model})" : '')
-                );
-                mysqli_query($conn,
-                    "INSERT INTO Equipment
-                     (EquipmentOfferingID, Specification, AvailabilityStatus, NeedsOperator, EquipmentPaymentStatus)
-                     VALUES ({$newEoId}, '{$specStr}', '{$unitStatus}', 0, 'Unpaid')"
-                );
-                $successMsg = "Equipment \"{$name}\" added to the catalog.";
-            } else {
-                $errorMsg = "Failed to add equipment. The name may already exist.";
-                if (mysqli_errno($conn)) $errorMsg .= " (DB: " . mysqli_error($conn) . ")";
-                $reopenAddModal = true;
-            }
+            $successMsg = "Equipment \"{$name}\" added to the catalog.";
+        } else {
+            $dbErr = mysqli_error($conn);
+            $errorMsg = "Failed to add equipment." . ($dbErr ? " Error: {$dbErr}" : " The name may already exist.");
+            $reopenAddModal = true;
         }
     }
 }
@@ -713,9 +713,9 @@ function addSpecRow(containerId) {
     var row = document.createElement('div');
     row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;';
     row.innerHTML =
-        '<input type="text" class="spec-label" placeholder="Label (e.g. Load capacity)"' +
+        '<input type="text" class="spec-label" name="spec_label[]" placeholder="Label (e.g. Load capacity)"' +
         ' style="padding:7px 10px;border:1px solid var(--admin-border);border-radius:6px;font-size:0.82rem;font-family:inherit;">' +
-        '<input type="text" class="spec-value" placeholder="Value (e.g. 18 tons)"' +
+        '<input type="text" class="spec-value" name="spec_value[]" placeholder="Value (e.g. 18 tons)"' +
         ' style="padding:7px 10px;border:1px solid var(--admin-border);border-radius:6px;font-size:0.82rem;font-family:inherit;">' +
         '<button type="button" onclick="this.closest(\'div\').remove()"' +
         ' style="width:30px;height:30px;border-radius:6px;border:1px solid #fecaca;background:#fee2e2;color:#dc2626;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">×</button>';
