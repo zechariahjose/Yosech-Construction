@@ -889,7 +889,8 @@ function pjCloseEdit(editId) {
 
 (function () {
     function bindTrackForm(form) {
-        var btn     = form.querySelector('button[type="submit"]');
+        // Target the specific save button by class if available, else first submit
+        var btn = form.querySelector('.pj-edit-save-btn') || form.querySelector('button[type="submit"]');
         var tracked = form.querySelectorAll('[data-original]');
         if (!btn || !tracked.length) return;
         function check() {
@@ -905,6 +906,11 @@ function pjCloseEdit(editId) {
     }
     document.querySelectorAll('.js-track-form').forEach(bindTrackForm);
     document.querySelectorAll('.js-edit-modal-form').forEach(bindTrackForm);
+
+    // Ensure unpublish buttons are NEVER disabled
+    document.querySelectorAll('button[name="unpublish_from_website"]').forEach(function(btn) {
+        btn.disabled = false;
+    });
 
     document.querySelectorAll('.js-post-update-form').forEach(function(form) {
         var btn      = form.querySelector('button[type="submit"], button:not([type="button"])');
