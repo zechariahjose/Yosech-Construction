@@ -395,7 +395,7 @@ $publishedShowcaseId = $alreadyPublished ? (int)$publishedRow['ProjectShowcaseID
                     <button type="button" class="admin-btn admin-btn-outline admin-btn-sm"
                             onclick="pjCloseEdit('<?= $pEditId ?>')">Cancel</button>
                     <button type="submit" name="edit_project" id="saveBtn_<?= $pId ?>"
-                            class="admin-btn admin-btn-primary admin-btn-sm pj-edit-save-btn" disabled>
+                            class="admin-btn admin-btn-primary admin-btn-sm pj-edit-save-btn">
                         Save Changes
                     </button>
                 </div>

@@ -328,6 +328,52 @@ include("../includes/manager/layout_start.php");
             <button type="submit" name="update_availability" class="admin-btn admin-btn-primary admin-btn-sm" disabled>Save</button>
         </form>
 
+        <!-- Publish / Unpublish from website -->
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--admin-border);">
+            <?php if ($eq['AvailabilityStatus'] === 'Unavailable'): ?>
+                <!-- Currently hidden from website — offer to republish -->
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-size:0.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#dc2626;margin-bottom:2px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px;"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg>
+                            Not visible on website
+                        </div>
+                        <div style="font-size:0.76rem;color:var(--admin-muted);">This equipment is hidden from the public catalog.</div>
+                    </div>
+                    <form method="POST">
+                        <input type="hidden" name="equipment_offering_id" value="<?= (int)$eq['EquipmentOfferingID'] ?>">
+                        <input type="hidden" name="availability_status" value="Available">
+                        <button type="submit" name="update_availability"
+                                class="admin-btn admin-btn-outline admin-btn-sm"
+                                style="color:#059669;border-color:#a7f3d0;"
+                                onclick="return confirm('Republish <?= htmlspecialchars(addslashes($eq['Name'])) ?> to the website? It will become visible in the public catalog.')">
+                            Republish to Website
+                        </button>
+                    </form>
+                </div>
+            <?php else: ?>
+                <!-- Currently visible on website — offer to unpublish -->
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-size:0.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#059669;margin-bottom:2px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px;"><path d="M20 6L9 17l-5-5"/></svg>
+                            Visible on website
+                        </div>
+                        <div style="font-size:0.76rem;color:var(--admin-muted);">Shown in the public equipment catalog.</div>
+                    </div>
+                    <form method="POST">
+                        <input type="hidden" name="equipment_offering_id" value="<?= (int)$eq['EquipmentOfferingID'] ?>">
+                        <input type="hidden" name="availability_status" value="Unavailable">
+                        <button type="submit" name="update_availability"
+                                class="admin-btn admin-btn-danger admin-btn-sm"
+                                onclick="return confirm('Unpublish <?= htmlspecialchars(addslashes($eq['Name'])) ?> from the website? It will be hidden from the public catalog.')">
+                            Unpublish from Website
+                        </button>
+                    </form>
+                </div>
+            <?php endif; ?>
+        </div>
+
     </div><!-- /.admin-card -->
 
     <!-- ── Edit Modal ──────────────────────────────────────── -->

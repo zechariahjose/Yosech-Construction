@@ -161,7 +161,7 @@ $scDetailId = 'detailShowcase_' . $scId;
                     <div style="display:flex;gap:8px;">
                         <button type="button" class="admin-btn admin-btn-outline admin-btn-sm"
                                 onclick="pjCloseEdit('<?= $scEditId ?>')">Cancel</button>
-                        <button type="submit" name="edit_showcase" class="admin-btn admin-btn-primary admin-btn-sm" disabled>
+                        <button type="submit" name="edit_showcase" class="admin-btn admin-btn-primary admin-btn-sm">
                             Save Changes
                         </button>
                     </div>

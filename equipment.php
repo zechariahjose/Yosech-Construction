@@ -7,7 +7,7 @@ $isClient = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'Client'
 
 $result = mysqli_query(
     $conn,
-    "SELECT * FROM EquipmentOffering ORDER BY EquipmentOfferingID ASC"
+    "SELECT * FROM EquipmentOffering WHERE AvailabilityStatus != 'Unavailable' ORDER BY EquipmentOfferingID ASC"
 );
 
 $equipment = [];
