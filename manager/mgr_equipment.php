@@ -56,14 +56,23 @@ if (isset($_POST['add_equipment'])) {
             $eStatus = mysqli_real_escape_string($conn, $status);
             $eImg    = $imgPath ? "'" . mysqli_real_escape_string($conn, $imgPath) . "'" : 'NULL';
 
+            // Check if DateAdded column exists
+            $hasDateAdded = (bool) mysqli_fetch_assoc(mysqli_query($conn,
+                "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                 WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='EquipmentOffering' AND COLUMN_NAME='DateAdded'"
+            ));
+
+            $dateAddedSql = $hasDateAdded ? ", DateAdded" : "";
+            $dateAddedVal = $hasDateAdded ? ", NOW()" : "";
+
             // Insert into EquipmentOffering (drives public website)
-            mysqli_query($conn,
+            $insertResult = mysqli_query($conn,
                 "INSERT INTO EquipmentOffering
-                 (Name, Model, Description, Specs, HourlyRate, DailyRate, WeeklyRate, MonthlyRate, AvailabilityStatus, ImageURL, DateAdded)
+                 (Name, Model, Description, Specs, HourlyRate, DailyRate, WeeklyRate, MonthlyRate, AvailabilityStatus, ImageURL{$dateAddedSql})
                  VALUES ('{$eName}', '{$eModel}', '{$eDesc}', '{$eSpecs}',
-                         {$hourly}, {$daily}, {$weekly}, {$monthly}, '{$eStatus}', {$eImg}, NOW())"
+                         {$hourly}, {$daily}, {$weekly}, {$monthly}, '{$eStatus}', {$eImg}{$dateAddedVal})"
             );
-            $newEoId = (int) mysqli_insert_id($conn);
+            $newEoId = $insertResult ? (int) mysqli_insert_id($conn) : 0;
 
             if ($newEoId > 0) {
                 // Insert matching Equipment unit
@@ -83,6 +92,7 @@ if (isset($_POST['add_equipment'])) {
                 $successMsg = "Equipment \"{$name}\" added to the catalog.";
             } else {
                 $errorMsg = "Failed to add equipment. The name may already exist.";
+                if (mysqli_errno($conn)) $errorMsg .= " (DB: " . mysqli_error($conn) . ")";
                 $reopenAddModal = true;
             }
         }
