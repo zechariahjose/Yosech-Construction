@@ -156,7 +156,7 @@ if (isset($_GET['error'])) $error = 'Invalid username or password. If you don\'t
 
                 <div class="login-field">
                     <label for="username">EMAIL ADDRESS / USERNAME</label>
-                    <input type="text" id="username" name="username" placeholder="client@project.com" required autocomplete="username" value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
+                    <input type="text" id="username" name="username" placeholder="" required autocomplete="username" value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
                 </div>
 
                 <div class="login-field">

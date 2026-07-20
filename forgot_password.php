@@ -31,6 +31,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_reset'], $_POST['t
     $newPw   = $_POST['new_password']  ?? '';
     $confPw  = $_POST['confirm_password'] ?? '';
 
+    // Check table exists before querying
+    $tblExists = mysqli_num_rows(mysqli_query($conn,
+        "SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='password_reset_tokens' LIMIT 1"
+    )) > 0;
+
+    if (!$tblExists) {
+        $error = "Reset token system is not available. Please contact the administrator.";
+        $step  = 'expired';
+    } else {
+
     // Validate token
     $stmt = mysqli_prepare($conn,
         "SELECT * FROM password_reset_tokens
@@ -68,6 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_reset'], $_POST['t
         $step    = 'done';
         $success = "Your password has been reset successfully. You can now log in.";
     }
+    } // end tblExists check
 }
 
 // ── STEP 2: Handle email submission (generate token) ───────
@@ -79,24 +90,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_forgot'])) {
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "Please enter a valid email address.";
     } else {
+        // Check if password_reset_tokens table exists
+        $tableCheck = mysqli_query($conn,
+            "SELECT 1 FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'password_reset_tokens' LIMIT 1"
+        );
+        if (!$tableCheck || mysqli_num_rows($tableCheck) === 0) {
+            // Table missing — create it on the fly (no schema change to existing tables)
+            mysqli_query($conn,
+                "CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                    id         INT AUTO_INCREMENT PRIMARY KEY,
+                    user_type  ENUM('Client') NOT NULL DEFAULT 'Client',
+                    user_id    INT NOT NULL,
+                    token      VARCHAR(64) NOT NULL UNIQUE,
+                    expires_at DATETIME NOT NULL,
+                    used       TINYINT(1) NOT NULL DEFAULT 0,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+            );
+        }
+
         $escEmail = mysqli_real_escape_string($conn, $email);
         $client   = mysqli_fetch_assoc(mysqli_query($conn,
             "SELECT UserID, Client_FirstName FROM Client WHERE Client_Email = '{$escEmail}' LIMIT 1"
         ));
 
         if (!$client) {
-            // Show the same "sent" screen to avoid email enumeration
-            $step = 'sent';
+            $step = 'sent'; // same screen regardless — no email enumeration
         } else {
-            // Clean old unused tokens for this user
             $uid = (int) $client['UserID'];
             mysqli_query($conn,
                 "DELETE FROM password_reset_tokens WHERE user_id = {$uid} AND used = 0"
             );
 
-            // Generate secure token
-            // NOTE: Use MySQL's NOW()+INTERVAL to avoid PHP↔MySQL timezone mismatch
-            $rawToken = bin2hex(random_bytes(32)); // 64 hex chars
+            $rawToken = bin2hex(random_bytes(32));
 
             $ins = mysqli_prepare($conn,
                 "INSERT INTO password_reset_tokens (user_type, user_id, token, expires_at)
@@ -105,11 +132,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_forgot'])) {
             mysqli_stmt_bind_param($ins, "is", $uid, $rawToken);
             mysqli_stmt_execute($ins);
 
-            // Build reset URL to display on screen
             $resetUrl = rtrim(BASE_URL, '/') . '/forgot_password.php?token=' . urlencode($rawToken);
-
-            $step    = 'sent';
-            $success = $resetUrl; // We pass the URL so it can be displayed
+            $step     = 'sent';
+            $success  = $resetUrl;
         }
     }
 }
